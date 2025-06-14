@@ -59,7 +59,7 @@ test("Check availability", async () => {
 
       const hasAvailability = await calendar
         .locator('td:has-text("△")') // Triangle symbol for available dates
-        .or(calendar.locator('td:has-text("31")')) // Circle symbol for available dates
+        .or(calendar.locator('td:has-text("○")')) // Circle symbol for available dates
         .isVisible();
 
       if (hasAvailability && currentMonth) {
