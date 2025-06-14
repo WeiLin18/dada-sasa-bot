@@ -1,92 +1,86 @@
 # Sumida Gym Availability Checker
 
-自動檢查墨田区体育館預約系統並在有空位時發送 Line 通知的專案。
+A project that automatically checks the Sumida City Gymnasium reservation system and sends Line notifications when slots become available.
 
-## 功能
+## Features
 
-- 使用 Playwright 自動化瀏覽器檢查墨田区体育館網站
-- 偵測頁面上的「三角形(△)」或「圓形(○)」符號，表示有空位可預約
-- 發現空位時透過 Line Notify 發送通知訊息和截圖
-- 可透過 GitHub Actions 自動定期執行檢查
-- 可在本地端運行或排程執行
+- Uses Playwright to automate browser checks on the Sumida City Gymnasium website
+- Detects "triangle (△)" or "circle (○)" symbols on the page, indicating available reservation slots
+- Sends notifications through Line Messaging API when availability is found
+- Can be automated to run periodically via GitHub Actions
+- Can be run locally or scheduled
 
-## 安裝
+## Installation
 
-本專案使用 pnpm 作為套件管理工具。
+This project uses pnpm as its package manager.
 
 ```bash
-# 複製專案
+# Clone the repository
 git clone <your-repo-url>
 cd dada-sasa
 
-# 安裝依賴
+# Install dependencies
 pnpm install
 
-# 安裝 Playwright 瀏覽器
+# Install Playwright browsers
 npx playwright install chromium
 ```
 
-## 配置
+## Configuration
 
-1. 複製 `.env.example` 到 `.env` 並填入必要資訊:
+1. Create a `.env` file with the required information:
 
 ```bash
 cp .env.example .env
 ```
 
-2. 編輯 `.env` 文件並填寫:
+2. Edit the `.env` file with your details:
 
 ```
-# Line Notify Token - 從 https://notify-bot.line.me/ 取得
-LINE_NOTIFY_TOKEN=your_token_here
+# Line Messaging API credentials
+LINE_CHANNEL_ACCESS_TOKEN=your_token_here
+LINE_USER_ID=your_user_id_here
 
-# 目標網址
-TARGET_URL=https://yoyaku.sumidacity-gym.com/index.php?op=monthly&UseYM=202507
-
-# 排程設定 (cron 格式)
-CHECK_SCHEDULE="0 */3 * * *"  # 每三小時執行一次
-
-# 瀏覽器配置
-HEADLESS=true
-SCREENSHOT_DIR=./screenshots
+# Sumida Gym login credentials
+USER_ID=your_gym_user_id
+PASSWORD=your_gym_password
 ```
 
-3. 如果使用 GitHub Actions, 需要在專案的 Settings > Secrets and variables > Actions 中添加 `LINE_NOTIFY_TOKEN` 密鑰。
+3. If using GitHub Actions, add the following secrets in your repository's Settings > Secrets and variables > Actions:
+   - `LINE_CHANNEL_ACCESS_TOKEN`: Your LINE messaging API token
+   - `LINE_USER_ID`: Your LINE user ID
+   - `USER_ID`: Your gym system user ID
+   - `PASSWORD`: Your gym system password
 
-## 使用方式
+## Usage
 
-### 本地執行單次檢查
+### Run a single check locally
 
 ```bash
-pnpm run check
-```
-
-### 啟動定期檢查服務
-
-```bash
-pnpm start
+pnpm test
 ```
 
 ### GitHub Actions
 
-專案包含 GitHub Actions 工作流配置，會按照設定的排程自動執行檢查。您也可以在 GitHub 界面手動觸發工作流。
+The project includes a GitHub Actions workflow configuration that will automatically run checks according to the schedule (every 3 hours by default). You can also manually trigger the workflow from the GitHub interface.
 
-## 系統要求
+## System Requirements
 
-- Node.js 18+
+- Node.js 20+
 - pnpm 8+
 
-## 開發筆記
+## Development Notes
 
-### 關於墨田区体育館網站
+### About Sumida City Gymnasium Website
 
-網站結構分析:
-- 空位以「△」(部分可用)和「○」(完全可用)表示
-- 該網站每月更新，需要調整 URL 參數以查看不同月份
+Website structure analysis:
 
-### 自訂檢查邏輯
+- Available slots are indicated by "△" (partially available) and "○" (fully available)
+- The website updates monthly, and you need to adjust the URL parameters to view different months
 
-如需修改檢查邏輯，請編輯 `src/checkAvailability.ts` 文件。
+### Customizing Check Logic
+
+To modify the checking logic, edit the `src/check.spec.ts` file.
 
 ## License
 
