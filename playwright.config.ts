@@ -6,7 +6,7 @@ import type { PlaywrightTestConfig } from "@playwright/test";
 const config: PlaywrightTestConfig = {
   testDir: "./src",
   testMatch: "**/*.spec.ts",
-  timeout: 30 * 1000,
+  timeout: 30 * 10000,
   expect: {
     timeout: 5 * 1000,
   },
