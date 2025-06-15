@@ -1,28 +1,26 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
-import { sendLineMessage, sendLineFlexMessage } from "../src/sendLineMessage";
+import { sendLineFlexMessage } from "../src/sendLineMessage";
 import { config } from "../src/config";
-
-test.describe.configure({ mode: "serial" });
 
 let page: Page;
 
-test("Test Line Messaging", async () => {
-  // 发送普通文本消息
-  await sendLineMessage("Hello, LINE Group!");
+// test("Test Line Messaging", async () => {
+//   // 发送普通文本消息
+//   await sendLineMessage("Hello, LINE Group!");
 
-  // 测试 Flex 消息
-  const title = "🧪 测试 Flex 消息";
-  const contents = [
-    "这是一条测试消息 📝",
-    "Flex 消息格式更美观 ✨",
-    "可以包含表情符号 😊",
-  ];
-  const buttonUrl = "https://line.me";
-  const buttonLabel = "访问 LINE";
+//   // 测试 Flex 消息
+//   const title = "🧪 测试 Flex 消息";
+//   const contents = [
+//     "这是一条测试消息 📝",
+//     "Flex 消息格式更美观 ✨",
+//     "可以包含表情符号 😊",
+//   ];
+//   const buttonUrl = "https://line.me";
+//   const buttonLabel = "访问 LINE";
 
-  await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
-});
+//   await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
+// });
 
 const areaList = [
   "メインアリーナ コート（１／２面）①",
