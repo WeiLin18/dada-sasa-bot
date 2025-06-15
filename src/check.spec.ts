@@ -63,6 +63,96 @@ test("Check availability", async ({ browser }) => {
   const availabilityInfo: { area: string; months: string[] }[] = [];
   const nextListButton = page.getByRole("link", { name: "次の一覧" });
 
+  const checkAreaTime = async (area) => {
+    const areaAvailability: string[] = [];
+    // Check current month and next 3 months (total 4 months)
+    for (let i = 0; i < 4; i++) {
+      await test.step(`Check availability for month ${i + 1}`, async () => {
+        const currentMonth = await page
+          .locator("th.month-cal-head")
+          .textContent();
+        const calendar = await page.locator("table.calendar");
+
+        // Get all cells with availability symbols
+        const availableCells = await calendar
+          .locator('a:has-text("△"), a:has-text("○")')
+          .all();
+
+        const hasAvailability = availableCells.length > 0;
+        const monthTimeSlots: string[] = [];
+
+        // If there are available dates, check the time slots for each one
+        if (hasAvailability && currentMonth) {
+          // Store information about each available date
+          for (let j = 0; j < Math.min(availableCells.length, 3); j++) {
+            // Limit to 3 dates per month to avoid too many clicks
+            const cell = availableCells[j];
+            const dateURL = (await cell.getAttribute("href")) || ""; // index.php?op=daily&UseDate=20250709
+            const dateMatch = dateURL.match(/UseDate=(\d{8})/); // Extract date from URL
+            const date = dateMatch ? dateMatch[1].slice(6, 8) : ""; // Get the day part (DD)
+            // Click on the cell to see available time slots
+            await cell.click();
+            await page.waitForLoadState("domcontentloaded");
+
+            // Define time ranges
+            const timeMap = ["9-12", "12-15", "15-18", "18-21"];
+
+            // Extract available time slots from the detailed view
+            const timeSlots = await page.locator("td.f-sizeup").all();
+
+            // Get available time slots based on their position in the table
+            const availableTimeSlots: string[] = [];
+            for (let k = 0; k < timeSlots.length; k++) {
+              const text = (await timeSlots[k].textContent()) || "";
+              // Check if this slot has the "○" or other availability symbol
+              if (text && text.trim() === "○") {
+                // Map the position to the timeMap (if within bounds)
+                if (k < timeMap.length) {
+                  availableTimeSlots.push(timeMap[k]);
+                }
+              }
+            }
+
+            // Format the time slots information
+            const formattedTimeSlots = availableTimeSlots.join(", ");
+
+            if (formattedTimeSlots) {
+              monthTimeSlots.push(`${date}日: ${formattedTimeSlots}`);
+            }
+
+            // Go back to the calendar view
+            await page.getByRole("link", { name: "戻る" }).click();
+            await page.waitForLoadState("domcontentloaded");
+          }
+
+          if (monthTimeSlots.length > 0) {
+            areaAvailability.push(
+              `${currentMonth} (${monthTimeSlots.join(" | ")})`
+            );
+          } else {
+            areaAvailability.push(currentMonth);
+          }
+        }
+
+        console.log(
+          `${area} - ${currentMonth} ${hasAvailability ? "有空時段" : "滿"}`
+        );
+        if (monthTimeSlots.length > 0) {
+          console.log(`  Available times: ${monthTimeSlots.join(" | ")}`);
+        }
+
+        // Go to next month if not the last iteration
+        if (i < 3) {
+          await page.locator("a.day-next").click();
+          await page.waitForLoadState("domcontentloaded");
+        }
+      });
+    }
+
+    if (areaAvailability.length > 0) {
+      availabilityInfo.push({ area, months: areaAvailability });
+    }
+  };
   // Check availability for all main areas
   for (const area of areaList) {
     await test.step(`Select area: ${area}`, async () => {
@@ -70,42 +160,7 @@ test("Check availability", async ({ browser }) => {
       await page.getByRole("link", { name: area }).click();
       await page.waitForLoadState("domcontentloaded");
 
-      const areaAvailability: string[] = [];
-
-      // Check current month and next 3 months (total 4 months)
-      for (let i = 0; i < 4; i++) {
-        await test.step(`Check availability for month ${i + 1}`, async () => {
-          const currentMonth = await page
-            .locator("th.month-cal-head")
-            .textContent();
-          const calendar = await page.locator("table.calendar");
-          const triangleCount = await calendar
-            .locator('td:has-text("△")')
-            .count();
-          const circleCount = await calendar
-            .locator('td:has-text("○")')
-            .count();
-          const hasAvailability = triangleCount > 0 || circleCount > 0;
-
-          if (hasAvailability && currentMonth) {
-            areaAvailability.push(currentMonth);
-          }
-
-          console.log(
-            `${area} - ${currentMonth} ${hasAvailability ? "有空時段" : "滿"}`
-          );
-
-          // Go to next month if not the last iteration
-          if (i < 3) {
-            await page.locator("a.day-next").click();
-            await page.waitForLoadState("domcontentloaded");
-          }
-        });
-      }
-
-      if (areaAvailability.length > 0) {
-        availabilityInfo.push({ area, months: areaAvailability });
-      }
+      await checkAreaTime(area);
 
       // Go back to the area selection page
       await page.getByRole("link", { name: "戻る" }).click();
@@ -126,44 +181,7 @@ test("Check availability", async ({ browser }) => {
       await page.getByRole("link", { name: area }).click();
       await page.waitForLoadState("domcontentloaded");
 
-      const areaAvailability: string[] = [];
-
-      // Check current month and next 3 months (total 4 months)
-      for (let i = 0; i < 4; i++) {
-        await test.step(`Check availability for month ${i + 1}`, async () => {
-          const currentMonth = await page
-            .locator("th.month-cal-head")
-            .textContent();
-          const calendar = await page.locator("table.calendar");
-
-          // Check if any availability exists using count() instead of isVisible() to handle multiple elements
-          const triangleCount = await calendar
-            .locator('td:has-text("△")')
-            .count(); // Triangle symbol for available dates
-          const circleCount = await calendar
-            .locator('td:has-text("○")')
-            .count(); // Circle symbol for available dates
-          const hasAvailability = triangleCount > 0 || circleCount > 0;
-
-          if (hasAvailability && currentMonth) {
-            areaAvailability.push(currentMonth);
-          }
-
-          console.log(
-            `${currentMonth} - ${area}  ${hasAvailability ? "有空時段" : "滿"}`
-          );
-
-          // Go to next month if not the last iteration
-          if (i < 3) {
-            await page.locator("a.day-next").click();
-            await page.waitForLoadState("domcontentloaded");
-          }
-        });
-      }
-
-      if (areaAvailability.length > 0) {
-        availabilityInfo.push({ area, months: areaAvailability });
-      }
+      await checkAreaTime(area);
 
       // Go back to the area selection page
       await page.getByRole("link", { name: "戻る" }).click();
@@ -180,7 +198,11 @@ test("Check availability", async ({ browser }) => {
       let messageContent = "すみだスポーツ施設予約情報:\n";
 
       for (const info of availabilityInfo) {
-        messageContent += `${info.area}: ${info.months.join(", ")}\n`;
+        messageContent += `${info.area}:\n`;
+        for (const month of info.months) {
+          messageContent += `- ${month}\n`;
+        }
+        messageContent += "\n";
       }
 
       messageContent +=
@@ -189,7 +211,8 @@ test("Check availability", async ({ browser }) => {
       await sendLineMessage(messageContent);
       console.log("LINE notification sent with available areas:");
       availabilityInfo.forEach((info) => {
-        console.log(`- ${info.area}: ${info.months.join(", ")}`);
+        console.log(`- ${info.area}:`);
+        info.months.forEach((month) => console.log(`  ${month}`));
       });
     });
   } else {
