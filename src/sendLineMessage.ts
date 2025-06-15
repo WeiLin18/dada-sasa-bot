@@ -40,7 +40,7 @@ export async function sendLineFlexMessage(
       );
       return false;
     }
-    if (!config.lineGroupId) {
+    if (!config.lineGroupId?.length) {
       console.error("LINE_GROUP_ID is not set in environment variables");
       return false;
     }
