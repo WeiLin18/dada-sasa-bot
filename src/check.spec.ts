@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
-import { getUserLineID, sendLineMessage } from "../src/sendLineMessage";
+import { sendLineMessage, sendLineFlexMessage } from "../src/sendLineMessage";
 import { config } from "../src/config";
 
 test.describe.configure({ mode: "serial" });
@@ -8,7 +8,20 @@ test.describe.configure({ mode: "serial" });
 let page: Page;
 
 test("Test Line Messaging", async () => {
+  // 发送普通文本消息
   await sendLineMessage("Hello, LINE Group!");
+
+  // 测试 Flex 消息
+  const title = "🧪 测试 Flex 消息";
+  const contents = [
+    "这是一条测试消息 📝",
+    "Flex 消息格式更美观 ✨",
+    "可以包含表情符号 😊",
+  ];
+  const buttonUrl = "https://line.me";
+  const buttonLabel = "访问 LINE";
+
+  await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
 });
 
 const areaList = [
@@ -68,9 +81,11 @@ test("Check availability", async ({ browser }) => {
     // Check current month and next 3 months (total 4 months)
     for (let i = 0; i < 4; i++) {
       await test.step(`Check availability for month ${i + 1}`, async () => {
-        const currentMonth = await page
-          .locator("th.month-cal-head")
-          .textContent();
+        const monthText = await page.locator("th.month-cal-head").textContent();
+        // 移除"令和X年"部分，只保留月份
+        const currentMonth = monthText
+          ? monthText.replace(/令和\s*\d+年\s*/, "")
+          : "";
         const calendar = await page.locator("table.calendar");
 
         // Get all cells with availability symbols
@@ -195,20 +210,27 @@ test("Check availability", async ({ browser }) => {
   // Send LINE notification if any availability was found
   if (availabilityInfo.length > 0) {
     await test.step("Send LINE notification", async () => {
-      let messageContent = "すみだスポーツ施設予約情報:\n";
+      // 准备Flex消息的标题
+      const title = "🏸 墨田施設情報";
+
+      // 准备Flex消息的内容数组
+      const contents: string[] = [];
 
       for (const info of availabilityInfo) {
-        messageContent += `${info.area}:\n`;
+        contents.push(`${info.area}:`);
         for (const month of info.months) {
-          messageContent += `- ${month}\n`;
+          contents.push(`📅 ${month}`);
         }
-        messageContent += "\n";
+        contents.push(" "); // 添加空行作为分隔
       }
 
-      messageContent +=
-        "\n詳細はこちら: https://yoyaku.sumidacity-gym.com/index.php";
+      // 设置按钮URL和标签
+      const buttonUrl = "https://yoyaku.sumidacity-gym.com/index.php";
+      const buttonLabel = "予約サイトへ";
 
-      await sendLineMessage(messageContent);
+      // 发送Flex消息
+      await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
+
       console.log("LINE notification sent with available areas:");
       availabilityInfo.forEach((info) => {
         console.log(`- ${info.area}:`);
