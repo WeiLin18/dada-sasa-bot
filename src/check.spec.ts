@@ -7,8 +7,8 @@ test.describe.configure({ mode: "serial" });
 
 let page: Page;
 
-test("Get user LINE ID", async () => {
-  await getUserLineID();
+test("Test Line Messaging", async () => {
+  await sendLineMessage("Hello, LINE Group!");
 });
 
 const areaList = [
