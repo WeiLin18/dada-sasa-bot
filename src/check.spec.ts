@@ -22,7 +22,7 @@ let page: Page;
 //   await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
 // });
 
-const areaList = [
+const sportAreaList = [
   "メインアリーナ コート（１／２面）①",
   "メインアリーナ コート（１／２面）②",
   "メインアリーナ コート（１／３面）①",
@@ -33,10 +33,28 @@ const areaList = [
   "メインアリーナ コート（１／４面）③",
   "メインアリーナ コート（１／４面）④",
 ];
-const nextAreaList = [
+const sportNextAreaList = [
   "サブアリーナ 全面",
   "サブアリーナ １／２面①",
   "サブアリーナ １／２面②",
+];
+
+const nightAreaList = [
+  "メインアリーナ夜間（２１時～２２時３０分） 全面",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／２面）①",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／２面）②",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）①",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）②",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）③",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）①",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）②",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）③",
+  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）④",
+];
+const nightNextAreaList = [
+  "サブアリーナ夜間（２１時～２２時３０分） 全面",
+  "サブアリーナ夜間（２１時～２２時３０分） １／２面①",
+  "サブアリーナ夜間（２１時～２２時３０分） １／２面②",
 ];
 
 test("Check availability", async ({ browser }) => {
@@ -65,16 +83,13 @@ test("Check availability", async ({ browser }) => {
     await page.waitForLoadState("domcontentloaded");
     await page.getByRole("link", { name: "施設で検索" }).click();
     await page.waitForLoadState("domcontentloaded");
-    await page.getByRole("link", { name: "スポーツ施設" }).click();
-    await page.waitForLoadState("domcontentloaded");
     console.log("Navigated to reservation page");
   });
 
   // Array to collect availability information
   const availabilityInfo: { area: string; months: string[] }[] = [];
-  const nextListButton = page.getByRole("link", { name: "次の一覧" });
 
-  const checkAreaTime = async (area) => {
+  const checkAreaTime = async (area, type?: "day" | "night") => {
     const areaAvailability: string[] = [];
     // Check current month and next 3 months (total 4 months)
     for (let i = 0; i < 4; i++) {
@@ -108,8 +123,10 @@ test("Check availability", async ({ browser }) => {
             await page.waitForLoadState("domcontentloaded");
 
             // Define time ranges
-            const timeMap = ["9-12", "12-15", "15-18", "🔥18-21🔥"];
+            const dayTimeMap = ["9-12", "12-15", "15-18", "18-21🔥"];
+            const nightTimeMap = ["21-22:30🌙"];
 
+            const timeMap = type === "night" ? nightTimeMap : dayTimeMap;
             // Extract available time slots from the detailed view
             const timeSlots = await page.locator("td.f-sizeup").all();
 
@@ -166,44 +183,105 @@ test("Check availability", async ({ browser }) => {
       availabilityInfo.push({ area, months: areaAvailability });
     }
   };
-  // Check availability for all main areas
-  for (const area of areaList) {
-    await test.step(`Select area: ${area}`, async () => {
-      console.log(`Checking availability for: ${area}`);
-      await page.getByRole("link", { name: area }).click();
-      await page.waitForLoadState("domcontentloaded");
 
-      await checkAreaTime(area);
+  await test.step("check スポーツ施設 area", async () => {
+    await page.getByRole("link", { name: "スポーツ施設" }).click();
+    await page.waitForLoadState("domcontentloaded");
 
-      // Go back to the area selection page
-      await page.getByRole("link", { name: "戻る" }).click();
+    await test.step("Check スポーツ施設 first page", async () => {
+      // Check availability for all main areas
+      for (const area of sportAreaList) {
+        await test.step(`Select area: ${area}`, async () => {
+          console.log(`Checking availability for: ${area}`);
+          await page.getByRole("link", { name: area }).click();
+          await page.waitForLoadState("domcontentloaded");
+
+          await checkAreaTime(area);
+
+          // Go back to the area selection page
+          await page.getByRole("link", { name: "戻る" }).click();
+          await page.waitForLoadState("domcontentloaded");
+        });
+      }
+    });
+
+    // Move to next list for sub-arenas
+    await test.step("Go to next list of areas", async () => {
+      await page.getByRole("link", { name: "次の一覧" }).click();
       await page.waitForLoadState("domcontentloaded");
     });
-  }
 
-  // Move to next list for sub-arenas
-  await test.step("Go to next list of areas", async () => {
-    await nextListButton.click();
-    await page.waitForLoadState("domcontentloaded");
+    await test.step("Check スポーツ施設 second page", async () => {
+      // Check availability for all sub-arena areas
+      for (const area of sportNextAreaList) {
+        await test.step(`Select area: ${area}`, async () => {
+          console.log(`Checking availability for: ${area}`);
+          await page.getByRole("link", { name: area }).click();
+          await page.waitForLoadState("domcontentloaded");
+
+          await checkAreaTime(area);
+
+          // Go back to the area selection page
+          await page.getByRole("link", { name: "戻る" }).click();
+          await page.waitForLoadState("domcontentloaded");
+
+          await page.getByRole("link", { name: "次の一覧" }).click();
+          await page.waitForLoadState("domcontentloaded");
+        });
+      }
+    });
   });
 
-  // Check availability for all sub-arena areas
-  for (const area of nextAreaList) {
-    await test.step(`Select area: ${area}`, async () => {
-      console.log(`Checking availability for: ${area}`);
-      await page.getByRole("link", { name: area }).click();
-      await page.waitForLoadState("domcontentloaded");
+  await page.getByRole("link", { name: "戻る" }).click();
+  await page.waitForLoadState("domcontentloaded");
 
-      await checkAreaTime(area);
+  await test.step("check 夜間アリーナ area", async () => {
+    await page.getByRole("link", { name: "夜間アリーナ" }).click();
+    await page.waitForLoadState("domcontentloaded");
 
-      // Go back to the area selection page
-      await page.getByRole("link", { name: "戻る" }).click();
-      await page.waitForLoadState("domcontentloaded");
+    await test.step("Check 夜間アリーナ first page", async () => {
+      // Check availability for all main areas
+      for (const area of nightAreaList) {
+        await test.step(`Select area: ${area}`, async () => {
+          console.log(`Checking availability for: ${area}`);
+          await page.getByRole("link", { name: area }).click();
+          await page.waitForLoadState("domcontentloaded");
 
-      await nextListButton.click();
+          await checkAreaTime(area, "night");
+
+          // Go back to the area selection page
+          await page.getByRole("link", { name: "戻る" }).click();
+          await page.waitForLoadState("domcontentloaded");
+        });
+      }
+    });
+
+    // Move to next list for sub-arenas
+    await test.step("Go to next list of areas", async () => {
+      await page.getByRole("link", { name: "次の一覧" }).click();
       await page.waitForLoadState("domcontentloaded");
     });
-  }
+
+    await test.step("Check 夜間アリーナ second page", async () => {
+      // Check availability for all sub-arena areas
+      for (const area of nightNextAreaList) {
+        await test.step(`Select area: ${area}`, async () => {
+          console.log(`Checking availability for: ${area}`);
+          await page.getByRole("link", { name: area }).click();
+          await page.waitForLoadState("domcontentloaded");
+
+          await checkAreaTime(area, "night");
+
+          // Go back to the area selection page
+          await page.getByRole("link", { name: "戻る" }).click();
+          await page.waitForLoadState("domcontentloaded");
+
+          await page.getByRole("link", { name: "次の一覧" }).click();
+          await page.waitForLoadState("domcontentloaded");
+        });
+      }
+    });
+  });
 
   // Send LINE notification if any availability was found
   if (availabilityInfo.length > 0) {

@@ -9,6 +9,7 @@ app.post("/", (req, res) => {
 
   const events = req.body.events || [];
   events.forEach((event) => {
+    console.log("🚀 ~ events.forEach ~ event:", event);
     if (event.source?.type === "group") {
       console.log("🎯 Group ID:", event.source.groupId);
       console.log("📱 事件類型:", event.type);
