@@ -7,7 +7,7 @@ let page: Page;
 
 // test("Test Line Messaging", async () => {
 //   // 发送普通文本消息
-//   await sendLineMessage("Hello, LINE Group!");
+//   await sendLineMessage("Hello, LINE Group! 我是 2 號 Bot 🤖");
 
 //   // 测试 Flex 消息
 //   const title = "🧪 测试 Flex 消息";
@@ -108,7 +108,7 @@ test("Check availability", async ({ browser }) => {
             await page.waitForLoadState("domcontentloaded");
 
             // Define time ranges
-            const timeMap = ["9-12", "12-15", "15-18", "18-21"];
+            const timeMap = ["9-12", "12-15", "15-18", "🔥18-21🔥"];
 
             // Extract available time slots from the detailed view
             const timeSlots = await page.locator("td.f-sizeup").all();
