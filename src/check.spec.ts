@@ -88,6 +88,8 @@ test("Check availability", async ({ browser }) => {
 
   // Array to collect availability information
   const availabilityInfo: { area: string; months: string[] }[] = [];
+  // 标记是否找到了黄金时段（18-21）
+  let hasPrimeTime = false;
 
   const checkAreaTime = async (area, type?: "day" | "night") => {
     const areaAvailability: string[] = [];
@@ -147,6 +149,10 @@ test("Check availability", async ({ browser }) => {
             const formattedTimeSlots = availableTimeSlots.join(", ");
 
             if (formattedTimeSlots) {
+              // 检查是否包含黄金时段
+              if (!hasPrimeTime && formattedTimeSlots.includes("18-21🔥")) {
+                hasPrimeTime = true;
+              }
               monthTimeSlots.push(`${date}日: ${formattedTimeSlots}`);
             }
 
@@ -286,8 +292,10 @@ test("Check availability", async ({ browser }) => {
   // Send LINE notification if any availability was found
   if (availabilityInfo.length > 0) {
     await test.step("Send LINE notification", async () => {
-      // 准备Flex消息的标题
-      const title = "🏸 墨田施設情報";
+      // 准备Flex消息的标题，如果有黄金时段就添加火焰表情
+      const title = hasPrimeTime
+        ? "🏸 墨田施設情報 晚上時段釋出🔥"
+        : "🏸 墨田施設情報";
 
       // 准备Flex消息的内容数组
       const contents: string[] = [];
@@ -295,7 +303,7 @@ test("Check availability", async ({ browser }) => {
       for (const info of availabilityInfo) {
         contents.push(`${info.area}:`);
         for (const month of info.months) {
-          contents.push(`📅 ${month}`);
+          contents.push(`${month}`);
         }
         contents.push(" "); // 添加空行作为分隔
       }
