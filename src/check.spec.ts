@@ -119,7 +119,20 @@ test("Check availability", async ({ browser }) => {
             const cell = availableCells[j];
             const dateURL = (await cell.getAttribute("href")) || ""; // index.php?op=daily&UseDate=20250709
             const dateMatch = dateURL.match(/UseDate=(\d{8})/); // Extract date from URL
-            const date = dateMatch ? dateMatch[1].slice(6, 8) : ""; // Get the day part (DD)
+            const dateStr = dateMatch ? dateMatch[1] : ""; // Get the full date (YYYYMMDD)
+            const date = dateStr ? dateStr.slice(6, 8) : ""; // Get the day part (DD)
+
+            // 获取星期几信息
+            let weekday = "";
+            if (dateStr) {
+              const year = parseInt(dateStr.slice(0, 4));
+              const month = parseInt(dateStr.slice(4, 6)) - 1; // JS月份从0开始
+              const day = parseInt(dateStr.slice(6, 8));
+              const dateObj = new Date(year, month, day);
+              const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+              weekday = weekdays[dateObj.getDay()];
+            }
+
             // Click on the cell to see available time slots
             await cell.click();
             await page.waitForLoadState("domcontentloaded");
@@ -153,7 +166,9 @@ test("Check availability", async ({ browser }) => {
               if (!hasPrimeTime && formattedTimeSlots.includes("18-21🔥")) {
                 hasPrimeTime = true;
               }
-              monthTimeSlots.push(`${date}日: ${formattedTimeSlots}`);
+              monthTimeSlots.push(
+                `${date}日(${weekday}): ${formattedTimeSlots}`
+              );
             }
 
             // Go back to the calendar view
@@ -163,7 +178,7 @@ test("Check availability", async ({ browser }) => {
 
           if (monthTimeSlots.length > 0) {
             areaAvailability.push(
-              `${currentMonth} (${monthTimeSlots.join(" | ")})`
+              `${currentMonth} ${monthTimeSlots.join(" | ")}`
             );
           } else {
             areaAvailability.push(currentMonth);
