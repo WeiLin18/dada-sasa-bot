@@ -90,6 +90,8 @@ test("Check availability", async ({ browser }) => {
   const availabilityInfo: { area: string; months: string[] }[] = [];
   // 标记是否找到了黄金时段（18-21）
   let hasPrimeTime = false;
+  // 标记是否找到了周末时段
+  let hasWeekendSlot = false;
 
   const checkAreaTime = async (area, type?: "day" | "night") => {
     const areaAvailability: string[] = [];
@@ -166,9 +168,27 @@ test("Check availability", async ({ browser }) => {
               if (!hasPrimeTime && formattedTimeSlots.includes("18-21🔥")) {
                 hasPrimeTime = true;
               }
-              monthTimeSlots.push(
-                `${date}日(${weekday}): ${formattedTimeSlots}`
-              );
+
+              // 检查是否是周末 (星期六或星期日)
+              if (!hasWeekendSlot && (weekday === "六" || weekday === "日")) {
+                hasWeekendSlot = true;
+                // 如果是周末，在时间前面添加周末标识，帮助用户识别
+                const formattedWithWeekend = formattedTimeSlots
+                  .split(", ")
+                  .map((slot) =>
+                    !slot.includes("🔥") && !slot.includes("🌙")
+                      ? slot + "📅"
+                      : slot
+                  )
+                  .join(", ");
+                monthTimeSlots.push(
+                  `${date}日(${weekday}): ${formattedWithWeekend}`
+                );
+              } else {
+                monthTimeSlots.push(
+                  `${date}日(${weekday}): ${formattedTimeSlots}`
+                );
+              }
             }
 
             // Go back to the calendar view
@@ -323,18 +343,24 @@ test("Check availability", async ({ browser }) => {
       });
 
       // Determine if we should send a notification
-      const shouldNotify = isPriorityTime || hasPrimeTime;
+      const shouldNotify = isPriorityTime || hasPrimeTime || hasWeekendSlot;
 
       console.log(`Current time in Japan: ${japanHour}:${japanMinute}`);
       console.log(`Is priority time: ${isPriorityTime}`);
       console.log(`Has prime time slots: ${hasPrimeTime}`);
+      console.log(`Has weekend slots: ${hasWeekendSlot}`);
       console.log(`Should send notification: ${shouldNotify}`);
 
       if (shouldNotify) {
-        // 准备Flex消息的标题，如果有黄金时段就添加火焰表情
-        const title = hasPrimeTime
-          ? "🏸 施設情報 晚上時段釋出🔥"
-          : "🏸 施設情報";
+        // 准备Flex消息的标题
+        let title = "🏸 施設情報";
+        if (hasPrimeTime && hasWeekendSlot) {
+          title = "🏸 晚上時段 & 假日時段釋出🔥";
+        } else if (hasPrimeTime) {
+          title = "🏸 晚上時段釋出🔥";
+        } else if (hasWeekendSlot) {
+          title = "🏸 假日時段釋出🔥";
+        }
 
         // 准备Flex消息的内容数组
         const contents: string[] = [];
