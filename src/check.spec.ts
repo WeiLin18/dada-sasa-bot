@@ -181,7 +181,7 @@ test("Check availability", async ({ browser }) => {
                   .split(", ")
                   .map((slot) =>
                     !slot.includes("🔥") && !slot.includes("🌙")
-                      ? slot + "📅"
+                      ? slot + "🔥"
                       : slot
                   )
                   .join(", ");
