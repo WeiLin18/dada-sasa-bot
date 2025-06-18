@@ -2,8 +2,8 @@ name: Gym Availability Checker
 
 on:
   schedule:
-    # Run every 15 minutes but skip Japan's night hours (00:00-07:00 JST = 15:00-22:00 UTC)
-    - cron: "*/15 0-14,23 * * *" # 0:00-14:59 UTC, 23:00-23:59 UTC (9:00-23:59 JST, 8:00-8:59 JST)
+    - cron: "*/15 0-14 * * *" # 0:00-14:59 UTC (9:00-23:59 JST)
+    - cron: "*/15 23 * * *" # 23:00-23:59 UTC (8:00-8:59 JST)
   workflow_dispatch: # Allow manual triggering
 
 jobs:
