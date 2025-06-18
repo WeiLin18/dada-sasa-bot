@@ -169,8 +169,12 @@ test("Check availability", async ({ browser }) => {
                 hasPrimeTime = true;
               }
 
-              // 检查是否是周末 (星期六或星期日)
-              if (!hasWeekendSlot && (weekday === "六" || weekday === "日")) {
+              // 只在日间体育设施检查是否是周末 (排除夜间设施)
+              if (
+                type !== "night" &&
+                !hasWeekendSlot &&
+                (weekday === "六" || weekday === "日")
+              ) {
                 hasWeekendSlot = true;
                 // 如果是周末，在时间前面添加周末标识，帮助用户识别
                 const formattedWithWeekend = formattedTimeSlots
