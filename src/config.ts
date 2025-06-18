@@ -10,4 +10,6 @@ export const config = {
   password: process.env.PASSWORD,
   userId: process.env.USER_ID,
   webhookPort: process.env.WEBHOOK_PORT || "3000",
+  // Time-based notification settings
+  priorityHours: [8, 12, 18, 22], // Hours when notifications should always be sent
 };

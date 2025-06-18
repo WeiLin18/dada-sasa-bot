@@ -59,7 +59,7 @@ const nightNextAreaList = [
 
 test("Check availability", async ({ browser }) => {
   page = await browser.newPage();
-  await page.goto("https://yoyaku.sumidacity-gym.com/index.php");
+  await page.goto("https://shisetsu.city.taito.lg.jp/");
   await page.waitForLoadState("domcontentloaded");
 
   await test.step("Login", async () => {
@@ -306,68 +306,35 @@ test("Check availability", async ({ browser }) => {
 
   // Send LINE notification if any availability was found
   if (availabilityInfo.length > 0) {
-    await test.step("Check notification timing", async () => {
-      // Get current time in Japan (JST = UTC+9)
-      const now = new Date();
-      const japanHour = (now.getUTCHours() + 9) % 24;
-      const japanMinute = now.getUTCMinutes();
+    await test.step("Send LINE notification", async () => {
+      // 准备Flex消息的标题，如果有黄金时段就添加火焰表情
+      const title = hasPrimeTime
+        ? "🏸 墨田施設情報 晚上時段釋出🔥"
+        : "🏸 墨田施設情報";
 
-      // Check if it's a priority hour (8:00, 12:00, 18:00, 22:00) within ±10 minutes
-      const isPriorityTime = config.priorityHours.some((hour) => {
-        const hourDiff = Math.abs(japanHour - hour);
-        return (
-          (hourDiff === 0 && japanMinute <= 10) || // Same hour, within first 10 minutes
-          (hourDiff === 23 && hour === 0 && japanMinute >= 50) || // Edge case for 23:50-00:10
-          (hourDiff === 1 && hour !== 0 && japanMinute >= 50)
-        ); // Within last 10 minutes of previous hour
-      });
+      // 准备Flex消息的内容数组
+      const contents: string[] = [];
 
-      // Determine if we should send a notification
-      const shouldNotify = isPriorityTime || hasPrimeTime;
-
-      console.log(`Current time in Japan: ${japanHour}:${japanMinute}`);
-      console.log(`Is priority time: ${isPriorityTime}`);
-      console.log(`Has prime time slots: ${hasPrimeTime}`);
-      console.log(`Should send notification: ${shouldNotify}`);
-
-      if (shouldNotify) {
-        // 准备Flex消息的标题，如果有黄金时段就添加火焰表情
-        const title = hasPrimeTime
-          ? "🏸 施設情報 晚上時段釋出🔥"
-          : "🏸 施設情報";
-
-        // 准备Flex消息的内容数组
-        const contents: string[] = [];
-
-        for (const info of availabilityInfo) {
-          contents.push(`${info.area}:`);
-          for (const month of info.months) {
-            contents.push(`${month}`);
-          }
-          contents.push(" "); // 添加空行作为分隔
+      for (const info of availabilityInfo) {
+        contents.push(`${info.area}:`);
+        for (const month of info.months) {
+          contents.push(`${month}`);
         }
-
-        // 设置按钮URL和标签
-        const buttonUrl = "https://yoyaku.sumidacity-gym.com/index.php";
-        const buttonLabel = "予約サイトへ";
-
-        // 发送Flex消息
-        await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
-
-        console.log("LINE notification sent with available areas:");
-        availabilityInfo.forEach((info) => {
-          console.log(`- ${info.area}:`);
-          info.months.forEach((month) => console.log(`  ${month}`));
-        });
-      } else {
-        console.log(
-          "Availability found, but not sending notification at this time."
-        );
-        availabilityInfo.forEach((info) => {
-          console.log(`- ${info.area}:`);
-          info.months.forEach((month) => console.log(`  ${month}`));
-        });
+        contents.push(" "); // 添加空行作为分隔
       }
+
+      // 设置按钮URL和标签
+      const buttonUrl = "https://yoyaku.sumidacity-gym.com/index.php";
+      const buttonLabel = "予約サイトへ";
+
+      // 发送Flex消息
+      await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
+
+      console.log("LINE notification sent with available areas:");
+      availabilityInfo.forEach((info) => {
+        console.log(`- ${info.area}:`);
+        info.months.forEach((month) => console.log(`  ${month}`));
+      });
     });
   } else {
     console.log("No availability found in any areas.");
