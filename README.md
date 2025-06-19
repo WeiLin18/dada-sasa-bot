@@ -49,16 +49,11 @@ PASSWORD=your_gym_password
 3. If using GitHub Actions, add the following secrets in your repository's Settings > Secrets and variables > Actions:
    - `LINE_CHANNEL_ACCESS_TOKEN`: Your LINE messaging API token
    - `LINE_USER_ID`: Your LINE user ID
+   - `LINE_GROUP_ID`: Your LINE group ID
    - `USER_ID`: Your gym system user ID
    - `PASSWORD`: Your gym system password
 
 ## Usage
-
-### Run a single check locally
-
-```bash
-pnpm test
-```
 
 ### GitHub Actions
 
