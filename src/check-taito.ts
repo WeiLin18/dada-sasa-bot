@@ -64,24 +64,31 @@ test("Check availability", async ({ browser }) => {
 
   await test.step("Login", async () => {
     console.log("Logging in to the reservation system...");
-    await page.getByRole("link", { name: "マイページ" }).click();
+    await page.getByRole("button", { name: "ログインする" }).click();
     await page.waitForLoadState("domcontentloaded");
 
     await page
-      .getByRole("textbox", { name: "利用者ID" })
-      .fill(config.userId as string);
+      .getByRole("textbox", { name: "登録番号（利用者ID）" })
+      .fill(config.taiUserId as string);
     await page
       .getByRole("textbox", { name: "パスワード" })
-      .fill(config.password as string);
+      .fill(config.taiPassword as string);
     await page.getByRole("button", { name: "ログイン" }).click();
     await page.waitForLoadState("domcontentloaded");
     console.log("Logged in successfully");
   });
 
   await test.step("Go to Reservation", async () => {
-    await page.getByRole("link", { name: "予約・抽選の申込" }).click();
+    await page.getByRole("button", { name: "運動施設" }).click();
     await page.waitForLoadState("domcontentloaded");
-    await page.getByRole("link", { name: "施設で検索" }).click();
+    await page
+      .getByRole("button", { name: "台東リバーサイドＳＣ体育館" })
+      .click();
+    await page.getByRole("button", { name: "次へ >>" }).click();
+    await page.waitForLoadState("domcontentloaded");
+    await page.getByRole("button", { name: "1ヶ月" }).click();
+    await page.getByRole("button", { name: "横表示" }).click();
+    await page.getByRole("button", { name: "次へ >>" }).click();
     await page.waitForLoadState("domcontentloaded");
     console.log("Navigated to reservation page");
   });
@@ -90,6 +97,8 @@ test("Check availability", async ({ browser }) => {
   const availabilityInfo: { area: string; months: string[] }[] = [];
   // 标记是否找到了黄金时段（18-21）
   let hasPrimeTime = false;
+  // 标记是否找到了周末时段
+  let hasWeekendSlot = false;
 
   const checkAreaTime = async (area, type?: "day" | "night") => {
     const areaAvailability: string[] = [];
@@ -166,9 +175,31 @@ test("Check availability", async ({ browser }) => {
               if (!hasPrimeTime && formattedTimeSlots.includes("18-21🔥")) {
                 hasPrimeTime = true;
               }
-              monthTimeSlots.push(
-                `${date}日(${weekday}): ${formattedTimeSlots}`
-              );
+
+              // 只在日间体育设施检查是否是周末 (排除夜间设施)
+              if (
+                type !== "night" &&
+                !hasWeekendSlot &&
+                (weekday === "六" || weekday === "日")
+              ) {
+                hasWeekendSlot = true;
+                // 如果是周末，在时间前面添加周末标识，帮助用户识别
+                const formattedWithWeekend = formattedTimeSlots
+                  .split(", ")
+                  .map((slot) =>
+                    !slot.includes("🔥") && !slot.includes("🌙")
+                      ? slot + "🔥"
+                      : slot
+                  )
+                  .join(", ");
+                monthTimeSlots.push(
+                  `${date}日(${weekday}): ${formattedWithWeekend}`
+                );
+              } else {
+                monthTimeSlots.push(
+                  `${date}日(${weekday}): ${formattedTimeSlots}`
+                );
+              }
             }
 
             // Go back to the calendar view
@@ -256,85 +287,80 @@ test("Check availability", async ({ browser }) => {
   await page.getByRole("link", { name: "戻る" }).click();
   await page.waitForLoadState("domcontentloaded");
 
-  await test.step("check 夜間アリーナ area", async () => {
-    await page.getByRole("link", { name: "夜間アリーナ" }).click();
-    await page.waitForLoadState("domcontentloaded");
+  // Get current time in Japan (JST = UTC+9)
+  const now = new Date();
+  const japanHour = (now.getUTCHours() + 9) % 24;
+  const japanMinute = now.getUTCMinutes();
 
-    await test.step("Check 夜間アリーナ first page", async () => {
-      // Check availability for all main areas
-      for (const area of nightAreaList) {
-        await test.step(`Select area: ${area}`, async () => {
-          console.log(`Checking availability for: ${area}`);
-          await page.getByRole("link", { name: area }).click();
-          await page.waitForLoadState("domcontentloaded");
-
-          await checkAreaTime(area, "night");
-
-          // Go back to the area selection page
-          await page.getByRole("link", { name: "戻る" }).click();
-          await page.waitForLoadState("domcontentloaded");
-        });
-      }
-    });
-
-    // Move to next list for sub-arenas
-    await test.step("Go to next list of areas", async () => {
-      await page.getByRole("link", { name: "次の一覧" }).click();
-      await page.waitForLoadState("domcontentloaded");
-    });
-
-    await test.step("Check 夜間アリーナ second page", async () => {
-      // Check availability for all sub-arena areas
-      for (const area of nightNextAreaList) {
-        await test.step(`Select area: ${area}`, async () => {
-          console.log(`Checking availability for: ${area}`);
-          await page.getByRole("link", { name: area }).click();
-          await page.waitForLoadState("domcontentloaded");
-
-          await checkAreaTime(area, "night");
-
-          // Go back to the area selection page
-          await page.getByRole("link", { name: "戻る" }).click();
-          await page.waitForLoadState("domcontentloaded");
-
-          await page.getByRole("link", { name: "次の一覧" }).click();
-          await page.waitForLoadState("domcontentloaded");
-        });
-      }
-    });
+  // Check if it's a priority hour (8:00, 12:00, 18:00, 22:00) within ±20 minutes
+  const isReportRoutineTime = config.priorityHours.some((hour) => {
+    // Calculate if we're before or after the priority hour
+    if (japanHour === hour) {
+      // Within the priority hour itself, we want the first 14 minutes
+      return japanMinute <= 14;
+    } else if (japanHour === hour - 1 || (japanHour === 23 && hour === 0)) {
+      // Hour before the priority hour, we want the last 14 minutes
+      return japanMinute >= 46;
+    }
+    return false;
   });
 
   // Send LINE notification if any availability was found
   if (availabilityInfo.length > 0) {
-    await test.step("Send LINE notification", async () => {
-      // 准备Flex消息的标题，如果有黄金时段就添加火焰表情
-      const title = hasPrimeTime
-        ? "🏸 墨田施設情報 晚上時段釋出🔥"
-        : "🏸 墨田施設情報";
+    await test.step("Check notification timing", async () => {
+      // Determine if we should send a notification
+      const shouldNotify =
+        isReportRoutineTime || hasPrimeTime || hasWeekendSlot;
 
-      // 准备Flex消息的内容数组
-      const contents: string[] = [];
+      console.log(`Current time in Japan: ${japanHour}:${japanMinute}`);
+      console.log(`Is priority time: ${isReportRoutineTime}`);
+      console.log(`Has prime time slots: ${hasPrimeTime}`);
+      console.log(`Has weekend slots: ${hasWeekendSlot}`);
+      console.log(`Should send notification: ${shouldNotify}`);
 
-      for (const info of availabilityInfo) {
-        contents.push(`${info.area}:`);
-        for (const month of info.months) {
-          contents.push(`${month}`);
+      if (shouldNotify) {
+        // 准备Flex消息的标题
+        let title = "🏸 施設情報";
+        if (hasPrimeTime && hasWeekendSlot) {
+          title = "🏸 晚上時段 & 假日時段釋出🔥";
+        } else if (hasPrimeTime) {
+          title = "🏸 晚上時段釋出🔥";
+        } else if (hasWeekendSlot) {
+          title = "🏸 假日時段釋出🔥";
         }
-        contents.push(" "); // 添加空行作为分隔
+
+        // 准备Flex消息的内容数组
+        const contents: string[] = [];
+
+        for (const info of availabilityInfo) {
+          contents.push(`${info.area}:`);
+          for (const month of info.months) {
+            contents.push(`${month}`);
+          }
+          contents.push(" "); // 添加空行作为分隔
+        }
+
+        // 设置按钮URL和标签
+        const buttonUrl = "https://yoyaku.sumidacity-gym.com/index.php";
+        const buttonLabel = "予約サイトへ";
+
+        // 发送Flex消息
+        await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
+
+        console.log("LINE notification sent with available areas:");
+        availabilityInfo.forEach((info) => {
+          console.log(`- ${info.area}:`);
+          info.months.forEach((month) => console.log(`  ${month}`));
+        });
+      } else {
+        console.log(
+          "Availability found, but not sending notification at this time."
+        );
+        availabilityInfo.forEach((info) => {
+          console.log(`- ${info.area}:`);
+          info.months.forEach((month) => console.log(`  ${month}`));
+        });
       }
-
-      // 设置按钮URL和标签
-      const buttonUrl = "https://yoyaku.sumidacity-gym.com/index.php";
-      const buttonLabel = "予約サイトへ";
-
-      // 发送Flex消息
-      await sendLineFlexMessage(title, contents, buttonUrl, buttonLabel);
-
-      console.log("LINE notification sent with available areas:");
-      availabilityInfo.forEach((info) => {
-        console.log(`- ${info.area}:`);
-        info.months.forEach((month) => console.log(`  ${month}`));
-      });
     });
   } else {
     console.log("No availability found in any areas.");

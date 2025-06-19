@@ -179,11 +179,7 @@ test("Check availability", async ({ browser }) => {
                 // 如果是周末，在时间前面添加周末标识，帮助用户识别
                 const formattedWithWeekend = formattedTimeSlots
                   .split(", ")
-                  .map((slot) =>
-                    !slot.includes("🔥") && !slot.includes("🌙")
-                      ? slot + "🔥"
-                      : slot
-                  )
+                  .map((slot) => (!slot.includes("🔥") ? slot + "🔥" : slot))
                   .join(", ");
                 monthTimeSlots.push(
                   `${date}日(${weekday}): ${formattedWithWeekend}`
@@ -285,15 +281,15 @@ test("Check availability", async ({ browser }) => {
   const japanHour = (now.getUTCHours() + 9) % 24;
   const japanMinute = now.getUTCMinutes();
 
-  // Check if it's a priority hour (8:00, 12:00, 18:00, 22:00) within ±20 minutes
+  // Check if it's a priority hour (8:00, 12:00, 18:00, 22:00) within ±15 minutes
   const isReportRoutineTime = config.priorityHours.some((hour) => {
     // Calculate if we're before or after the priority hour
     if (japanHour === hour) {
-      // Within the priority hour itself, we want the first 14 minutes
-      return japanMinute <= 14;
+      // Within the priority hour itself, we want the first 15 minutes
+      return japanMinute <= 15;
     } else if (japanHour === hour - 1 || (japanHour === 23 && hour === 0)) {
-      // Hour before the priority hour, we want the last 14 minutes
-      return japanMinute >= 46;
+      // Hour before the priority hour, we want the last 15 minutes
+      return japanMinute >= 45;
     }
     return false;
   });
