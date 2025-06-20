@@ -48,6 +48,7 @@ jobs:
         run: |
           echo "LINE_CHANNEL_ACCESS_TOKEN=${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}" > .env
           echo "LINE_USER_ID=${{ secrets.LINE_USER_ID }}" >> .env
+          echo "LINE_GROUP_ID=${{ secrets.LINE_GROUP_ID }}" >> .env
           echo "PASSWORD=${{ secrets.PASSWORD }}" >> .env
           echo "USER_ID=${{ secrets.USER_ID }}" >> .env
 
