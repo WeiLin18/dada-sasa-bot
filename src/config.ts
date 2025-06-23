@@ -16,5 +16,5 @@ export const config = {
 
   webhookPort: "3000",
   // Time-based notification settings
-  priorityHours: [18], // Hours when notifications should always be sent
+  priorityHours: [8, 12, 18, 22], // Hours when notifications should always be sent
 };

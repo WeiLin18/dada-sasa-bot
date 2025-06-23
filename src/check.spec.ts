@@ -286,10 +286,10 @@ test("Check availability", async ({ browser }) => {
     // Calculate if we're before or after the priority hour
     if (japanHour === hour) {
       // Within the priority hour itself, we want the first 20 minutes
-      return japanMinute <= 20;
+      return japanHour === 12 ? japanMinute <= 20 : japanMinute <= 15;
     } else if (japanHour === hour - 1 || (japanHour === 23 && hour === 0)) {
       // Hour before the priority hour, we want the last 20 minutes
-      return japanMinute >= 40;
+      return japanHour === 12 ? japanMinute >= 40 : japanMinute >= 15;
     }
     return false;
   });
