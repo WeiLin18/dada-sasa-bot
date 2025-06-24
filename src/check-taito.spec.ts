@@ -35,17 +35,17 @@ const facilityTypes = [
 // 檢查當前時間是否在優先小時內或其前後15分鐘
 function shouldRunTest(): boolean {
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
+  const japanHour = (now.getUTCHours() + 9) % 24;
+  const japanMinute = now.getUTCMinutes();
 
   return config.priorityHours.some((hour) => {
     // 如果當前小時就是優先小時，只在前12分鐘內執行
-    if (currentHour === hour) {
-      return currentMinute <= 12;
+    if (japanHour === hour) {
+      return japanMinute <= 12;
     }
     // 如果是優先小時的前一小時，只在後12分鐘內執行
-    else if (currentHour === hour - 1 || (currentHour === 23 && hour === 0)) {
-      return currentMinute >= 48;
+    else if (japanHour === hour - 1 || (japanHour === 23 && hour === 0)) {
+      return japanMinute >= 48;
     }
     return false;
   });
@@ -54,10 +54,10 @@ function shouldRunTest(): boolean {
 test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   // 檢查是否應該在當前時間執行測試
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
+  const japanHour = (now.getUTCHours() + 9) % 24;
+  const japanMinute = now.getUTCMinutes();
   console.log(
-    `當前時間: ${now.toLocaleString()}, ${currentHour}:${currentMinute
+    `當前時間: ${now.toLocaleString()}, ${japanHour}:${japanMinute
       .toString()
       .padStart(2, "0")}`
   );
