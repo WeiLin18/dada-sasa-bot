@@ -360,11 +360,11 @@ test("Check availability", async ({ browser }) => {
 
       if (shouldNotify) {
         // 准备Flex消息的标题
-        let title = "🏸 施設情報";
+        let title = "🏸 墨田施設情報";
         if (hasPrimeTime && hasWeekendSlot) {
-          title = "🏸 晚上時段 & 假日時段釋出🔥";
+          title = "🏸 墨田晚上時段 & 假日時段釋出🔥";
         } else if (hasPrimeTime) {
-          title = "🏸 晚上時段釋出🔥";
+          title = "🏸 墨田晚上時段釋出🔥";
         } else if (hasWeekendSlot) {
           title = "🏸 假日時段釋出🔥";
         }

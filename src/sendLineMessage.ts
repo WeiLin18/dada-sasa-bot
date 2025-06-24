@@ -70,12 +70,14 @@ export async function sendLineFlexMessage(
         body: {
           type: "box",
           layout: "vertical",
-          contents: contents.map((content) => ({
-            type: "text",
-            text: content,
-            wrap: true,
-            margin: "md",
-          })),
+          contents: contents
+            .filter(content => content && content.trim() !== "") // 確保不含空字符串
+            .map((content) => ({
+              type: "text",
+              text: content || " ", // 使用空格替代可能的空字符串
+              wrap: true,
+              margin: "md",
+            })),
           paddingBottom: "8px",
         },
         footer: buttonUrl
