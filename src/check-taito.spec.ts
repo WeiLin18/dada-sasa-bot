@@ -32,7 +32,52 @@ const facilityTypes = [
   "第２競技場",
 ];
 
+// 檢查當前時間是否在優先小時內或其前後15分鐘
+function shouldRunTest(): boolean {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  return config.priorityHours.some((hour) => {
+    // 如果當前小時就是優先小時，只在前12分鐘內執行
+    if (currentHour === hour) {
+      return currentMinute <= 12;
+    }
+    // 如果是優先小時的前一小時，只在後12分鐘內執行
+    else if (currentHour === hour - 1 || (currentHour === 23 && hour === 0)) {
+      return currentMinute >= 48;
+    }
+    return false;
+  });
+}
+
 test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
+  // 檢查是否應該在當前時間執行測試
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  console.log(
+    `當前時間: ${now.toLocaleString()}, ${currentHour}:${currentMinute
+      .toString()
+      .padStart(2, "0")}`
+  );
+
+  if (!shouldRunTest()) {
+    console.log(
+      `當前時間不在指定的優先時間 [${config.priorityHours.join(
+        ", "
+      )}] 的前後12分鐘內，跳過執行`
+    );
+    test.skip();
+    return;
+  }
+
+  console.log(
+    `當前時間在指定的優先時間 [${config.priorityHours.join(
+      ", "
+    )}] 的前後12分鐘內，開始執行測試`
+  );
+
   page = await browser.newPage();
   // 設定較長的導航超時時間
   page.setDefaultTimeout(600000);
