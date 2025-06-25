@@ -51,6 +51,8 @@ jobs:
           echo "LINE_GROUP_ID=${{ secrets.LINE_GROUP_ID }}" >> .env
           echo "PASSWORD=${{ secrets.PASSWORD }}" >> .env
           echo "USER_ID=${{ secrets.USER_ID }}" >> .env
+          echo "TAI_PASSWORD=${{ secrets.TAI_PASSWORD }}" >> .env
+          echo "TAI_USER_ID=${{ secrets.TAI_USER_ID }}" >> .env
 
       - name: Run availability check
         run: pnpm test
