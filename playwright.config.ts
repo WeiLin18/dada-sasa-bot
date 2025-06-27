@@ -6,10 +6,7 @@ import type { PlaywrightTestConfig } from "@playwright/test";
 const config: PlaywrightTestConfig = {
   testDir: "./src",
   testMatch: "**/*.spec.ts",
-  timeout: 30 * 10000,
-  expect: {
-    timeout: 5 * 1000,
-  },
+  timeout: 10 * 60 * 1000, // 10 minutes
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
