@@ -285,11 +285,11 @@ test("Check availability", async ({ browser }) => {
   const isReportRoutineTime = config.priorityHours.some((hour) => {
     // Calculate if we're before or after the priority hour
     if (japanHour === hour) {
-      // Within the priority hour itself, we want the first 12 minutes
-      return japanMinute <= 12;
+      // Within the priority hour itself, we want the first 15 minutes
+      return japanMinute <= config.rangeMinutes;
     } else if (japanHour === hour - 1 || (japanHour === 23 && hour === 0)) {
-      // Hour before the priority hour, we want the last 12 minutes
-      return japanMinute >= 48;
+      // Hour before the priority hour, we want the last 15 minutes
+      return japanMinute >= 60 - config.rangeMinutes;
     }
     return false;
   });
