@@ -67,6 +67,12 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
     return;
   }
 
+  console.log(
+    `當前時間在指定的優先時間 [${config.priorityHours.join(
+      ", "
+    )}] 的前後15分鐘內，開始執行測試`
+  );
+
   page = await browser.newPage();
   // 設定較長的導航超時時間
   page.setDefaultTimeout(600000);
@@ -271,6 +277,8 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         for (const marker of markersToSelect) {
           const markerText = await marker.textContent();
           console.log(`點擊標記: ${markerText}`);
+          await page.mouse.wheel(0, 100);
+          await page.waitForTimeout(200);
           await marker.click();
           await page.waitForTimeout(300);
         }
@@ -278,9 +286,11 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         // 點擊下一步按鈕前進到詳情頁面
         console.log(`點擊"次へ >>"按鈕前進到詳情頁面`);
         const nextButton = page.locator("#ucPCFooter_pnlNextBtn");
+        await page.mouse.wheel(0, 100);
+        await page.waitForTimeout(200);
         await nextButton.click();
         await page.waitForLoadState("domcontentloaded");
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(500);
 
         // 在詳情頁面記錄晚上時段可用的位置
         console.log(`正在詳情頁面尋找晚上時段可用的位置`);
@@ -349,6 +359,8 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
         // 返回上一頁
         console.log(`點擊"<< 戻る"按鈕返回上一頁`);
+        await page.mouse.wheel(0, 100);
+        await page.waitForTimeout(200);
         const backButton = page.locator("#ucPCFooter_pnlBackBtn");
         await backButton.click();
         await page.waitForLoadState("domcontentloaded");
@@ -357,6 +369,8 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         // 取消所有選擇，再次點擊之前選擇的標記取消選擇
         console.log(`取消所有選擇`);
         for (const marker of markersToSelect) {
+          await page.mouse.wheel(0, 100);
+          await page.waitForTimeout(200);
           await marker.click();
           await page.waitForTimeout(300);
         }
@@ -370,6 +384,8 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         "#dlRepeat_ctl00_tpItem_Migrated_lnkNextSpan"
       );
 
+      await page.mouse.wheel(0, 100);
+      await page.waitForTimeout(200);
       await nextRightButton.click();
       await page.waitForLoadState("domcontentloaded");
       await page.waitForTimeout(1500); // 稍微等待久一點確保頁面加載完成
