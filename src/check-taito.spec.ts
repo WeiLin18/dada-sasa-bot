@@ -357,15 +357,23 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
             console.log(`設施 ${actualFacilityName} 的晚上時段沒有可用標記`);
           }
         }
+        async function getBackButton(page: Page) {
+          let btn = page.locator("#ucPCFooter_btnBack");
+          if (await btn.isVisible()) return btn;
+          btn = page.locator('input[type="submit"][name="ucPCFooter$btnBack"]');
+          if (await btn.isVisible()) return btn;
+          btn = page.locator('input[type="submit"][value="<< 戻る"]');
+          if (await btn.isVisible()) return btn;
+          btn = page.getByRole("button", { name: "<< 戻る" });
+          return btn;
+        }
 
         // 返回上一頁
         console.log(`點擊"<< 戻る"按鈕返回上一頁`);
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(200);
-        const backButton = await page
-          .locator("#ucPCFooter_pnlBackBtn")
-          .or(page.locator("#ucPCFooter_btnBack"))
-          .or(page.getByRole("button", { name: "<< 戻る" }));
+        const backButton = await getBackButton(page);
+        await backButton.click();
         await backButton.click();
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(1000);
