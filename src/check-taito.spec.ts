@@ -380,12 +380,12 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
     // 如果不是最後一頁，則點擊右箭頭進入下一頁
     if (pageNum < pagesToProcess - 1) {
       console.log(`點擊右箭頭進入下一頁`);
-      const nextRightButton = await page
-        .locator("#dlRepeat_ctl00_tpItem_Migrated_lnkNextSpan")
-        .or(page.getByRole("link", { name: "次の期間を表示" }));
 
       await page.mouse.wheel(500, 200);
       await page.waitForTimeout(1000);
+      const nextRightButton = await page
+        .locator("#dlRepeat_ctl00_tpItem_Migrated_lnkNextSpan")
+        .or(page.getByRole("link", { name: "次の期間を表示" }));
       await nextRightButton.click();
       await page.waitForLoadState("domcontentloaded");
       await page.waitForTimeout(1000); // 稍微等待久一點確保頁面加載完成
