@@ -44,6 +44,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   );
 
   const shouldRunTest = () => {
+    return true;
     return config.priorityHours.some((hour) => {
       // 如果當前小時就是優先小時，只在前15分鐘內執行
       if (japanHour === hour) {
@@ -361,9 +362,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         console.log(`點擊"<< 戻る"按鈕返回上一頁`);
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(200);
-        const backButton = await page
-          .locator("#ucPCFooter_pnlBackBtn")
-          .or(page.locator("#ucPCFooter_btnBack"));
+        const backButton = await page.locator("input#ucPCFooter_btnBack");
         await backButton.click();
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(1000);
