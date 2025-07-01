@@ -384,15 +384,10 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
       await page.mouse.wheel(1200, 500);
       await page.waitForTimeout(1000);
       const tableFooter = await page.locator("#TableFoot");
-      console.log("🚀 ~ selectAvailableSlots ~ tableFooter:", tableFooter);
-      const nextRightButton = await tableFooter
-        .locator("#dlRepeat_ctl00_tpItem_Migrated_lnkNextSpan")
-        .or(tableFooter.getByRole("link", { name: "次の期間を表示" }))
-        .or(tableFooter.locator("tbody tr td").last());
-      console.log(
-        "🚀 ~ selectAvailableSlots ~ nextRightButton:",
-        nextRightButton
+      const nextRightButton = await tableFooter.locator(
+        "a:has-text('次の期間を表示')"
       );
+
       await nextRightButton.click();
       await page.waitForLoadState("domcontentloaded");
       await page.waitForTimeout(1000); // 稍微等待久一點確保頁面加載完成
