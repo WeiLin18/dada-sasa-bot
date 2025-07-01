@@ -358,11 +358,10 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         }
 
         // 返回上一頁
-        console.log(`點擊"<< 戻る"按鈕返回上一頁`);
+        console.log(`go back 返回上一頁`);
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(200);
-        const backButton = await page.getByRole("link", { name: "<< 戻る" });
-        await backButton.click();
+        await page.goBack();
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(1000);
 
