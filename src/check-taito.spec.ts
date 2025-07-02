@@ -44,7 +44,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   );
 
   const shouldRunTest = () => {
-    return true;
+    // return true;
     return config.priorityHours.some((hour) => {
       // 如果當前小時就是優先小時，只在前15分鐘內執行
       if (japanHour === hour) {
