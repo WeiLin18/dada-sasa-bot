@@ -364,7 +364,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         console.log(`go back 返回上一頁`);
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(200);
-        await page.goBack();
+        await page.locator("#ucPCFooter_btnBack").click();
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(1000);
 
