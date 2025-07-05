@@ -13,8 +13,9 @@ const config: PlaywrightTestConfig = {
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    trace: "on-first-retry",
-    screenshot: "only-on-failure",
+    trace: "on",
+    screenshot: "on",
+    video: "on-first-retry",
   },
 
   outputDir: "e2e-result/",
