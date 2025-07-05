@@ -364,14 +364,48 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         console.log(`go back 返回上一頁`);
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(200);
-        await page.locator("#ucPCFooter_btnBack").click();
-        await page.waitForLoadState("domcontentloaded");
-        await page.waitForTimeout(1000);
 
-        const currentUrl = page.url();
-        const currentTitle = await page.title();
-        console.log(`目前頁面URL: ${currentUrl}`);
-        console.log(`目前頁面標題: ${currentTitle}`);
+        try {
+          // 截圖返回操作前的頁面狀態
+          const beforeScreenshotPath = path.join(
+            process.cwd(),
+            "e2e-result",
+            `before-back-${Date.now()}.png`
+          );
+          await page.screenshot({ path: beforeScreenshotPath, fullPage: true });
+          console.log(`已保存返回前的截圖: ${beforeScreenshotPath}`);
+
+          // 嘗試點擊返回按鈕
+          await page.locator("#ucPCFooter_btnBack").click({ timeout: 30000 });
+          await page.waitForLoadState("domcontentloaded");
+          await page.waitForTimeout(1000);
+
+          // 截圖返回操作後的頁面狀態
+          const afterScreenshotPath = path.join(
+            process.cwd(),
+            "e2e-result",
+            `after-back-${Date.now()}.png`
+          );
+          await page.screenshot({ path: afterScreenshotPath, fullPage: true });
+          console.log(`已保存返回後的截圖: ${afterScreenshotPath}`);
+        } catch (error) {
+          console.error(`點擊返回按鈕失敗: ${error.message}`);
+
+          // 出錯時截圖並保存
+          const errorScreenshotPath = path.join(
+            process.cwd(),
+            "e2e-result",
+            `back-error-${Date.now()}.png`
+          );
+          await page.screenshot({ path: errorScreenshotPath, fullPage: true });
+          console.log(`已保存錯誤截圖: ${errorScreenshotPath}`);
+
+          // 使用瀏覽器的返回功能作為備用方案
+          console.log(`嘗試使用瀏覽器返回功能作為備用方案`);
+          await page.goBack();
+          await page.waitForLoadState("domcontentloaded");
+          await page.waitForTimeout(1000);
+        }
 
         // 取消所有選擇，再次點擊之前選擇的標記取消選擇
         console.log(`取消所有選擇`);
