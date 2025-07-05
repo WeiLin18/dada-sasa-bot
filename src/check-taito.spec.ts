@@ -383,7 +383,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
       await page.mouse.wheel(1200, 500);
       await page.waitForTimeout(1000);
-      const nextRightButton = await page.locator("#btnNextPeriod");
+      const nextRightButton = await page.locator("input:has-text('次の')");
 
       await nextRightButton.click();
       await page.waitForLoadState("domcontentloaded");
