@@ -364,9 +364,52 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         console.log(`go back 返回上一頁`);
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(200);
-        await page.locator("#ucPCFooter_btnBack").click();
-        await page.waitForLoadState("domcontentloaded");
-        await page.waitForTimeout(1000);
+
+        try {
+          // 檢查返回按鈕是否存在
+          const backButton = page.locator("#ucPCFooter_btnBack");
+          const isBackButtonVisible = await backButton.isVisible();
+          console.log(`返回按鈕是否可見: ${isBackButtonVisible}`);
+          await backButton.click();
+
+          await page.waitForLoadState("domcontentloaded");
+          await page.waitForTimeout(1000);
+          // 截圖並保存，方便調試
+          const screenshotPath = path.join(
+            process.cwd(),
+            "e2e-result",
+            `back-button-click-${Date.now()}.png`
+          );
+          await page.screenshot({ path: screenshotPath, fullPage: true });
+          console.log(`已保存返回按鈕點擊的截圖: ${screenshotPath}`);
+
+          // 記錄頁面HTML，幫助調試
+          const html = await page.content();
+          const htmlPath = path.join(
+            process.cwd(),
+            "e2e-result",
+            `back-button-html-${Date.now()}.html`
+          );
+          fs.writeFileSync(htmlPath, html);
+          console.log(`已保存頁面HTML: ${htmlPath}`);
+        } catch (error) {
+          console.error(`點擊返回按鈕失敗: ${error.message}`);
+
+          // 出錯時截圖並保存
+          const errorScreenshotPath = path.join(
+            process.cwd(),
+            "e2e-result",
+            `back-error-${Date.now()}.png`
+          );
+          await page.screenshot({ path: errorScreenshotPath, fullPage: true });
+          console.log(`已保存錯誤截圖: ${errorScreenshotPath}`);
+
+          // 嘗試使用瀏覽器的返回功能
+          console.log(`嘗試使用瀏覽器返回功能`);
+          await page.goBack();
+          await page.waitForLoadState("domcontentloaded");
+          await page.waitForTimeout(1000);
+        }
 
         // 取消所有選擇，再次點擊之前選擇的標記取消選擇
         console.log(`取消所有選擇`);
