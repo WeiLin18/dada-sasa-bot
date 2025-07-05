@@ -370,10 +370,12 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
           const backButton = page.locator("#ucPCFooter_btnBack");
           const isBackButtonVisible = await backButton.isVisible();
           console.log(`返回按鈕是否可見: ${isBackButtonVisible}`);
-          await backButton.click();
+          if (isBackButtonVisible) {
+            await backButton.click();
+            await page.waitForLoadState("domcontentloaded");
+            await page.waitForTimeout(1000);
+          }
 
-          await page.waitForLoadState("domcontentloaded");
-          await page.waitForTimeout(1000);
           // 截圖並保存，方便調試
           const screenshotPath = path.join(
             process.cwd(),
