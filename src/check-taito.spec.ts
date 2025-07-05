@@ -44,7 +44,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   );
 
   const shouldRunTest = () => {
-    // return true;
+    return true;
     return config.priorityHours.some((hour) => {
       // 如果當前小時就是優先小時，只在前15分鐘內執行
       if (japanHour === hour) {
@@ -148,12 +148,12 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       // 確保沒有空字符串
       const filteredContents = contents.filter((item) => item !== "");
 
-      await sendLineFlexMessage(
-        title,
-        filteredContents,
-        buttonUrl,
-        buttonLabel
-      );
+      // await sendLineFlexMessage(
+      //   title,
+      //   filteredContents,
+      //   buttonUrl,
+      //   buttonLabel
+      // );
     } else {
       console.log("未找到晚上時段可用位置");
       // 發送無可用位置的通知
@@ -165,12 +165,12 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       // 確保沒有空字符串
       const filteredContents = contents.filter((item) => item !== "");
 
-      await sendLineFlexMessage(
-        title,
-        filteredContents,
-        buttonUrl,
-        buttonLabel
-      );
+      // await sendLineFlexMessage(
+      //   title,
+      //   filteredContents,
+      //   buttonUrl,
+      //   buttonLabel
+      // );
     }
   });
 });
@@ -383,10 +383,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
       await page.mouse.wheel(1200, 500);
       await page.waitForTimeout(1000);
-      const tableFooter = await page.locator("#TableFoot");
-      const nextRightButton = await tableFooter.locator(
-        "a:has-text('次の期間を表示')"
-      );
+      const nextRightButton = await page.locator("#btnNextPeriod");
 
       await nextRightButton.click();
       await page.waitForLoadState("domcontentloaded");
