@@ -2,6 +2,8 @@ import type { Page, Locator } from "@playwright/test";
 import { test } from "@playwright/test";
 import { config } from "../src/config";
 import { sendLineFlexMessage } from "./sendLineMessage";
+import * as fs from "fs";
+import * as path from "path";
 
 let page: Page;
 
@@ -32,7 +34,18 @@ const facilityTypes = [
   "第２競技場",
 ];
 
+// 在測試最開始增加錯誤收集功能
 test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
+  // 收集測試過程中的警告和錯誤，用於最終報告
+  const testIssues: string[] = [];
+  
+  // 確保截圖目錄存在
+  const screenshotDir = path.join(process.cwd(), "e2e-result");
+  if (!fs.existsSync(screenshotDir)) {
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    console.log(`已創建截圖目錄: ${screenshotDir}`);
+  }
+
   // 檢查是否應該在當前時間執行測試
   const now = new Date();
   const japanHour = (now.getUTCHours() + 9) % 24;
@@ -298,6 +311,24 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
         // 基於您提供的HTML結構直接查找包含設施名稱的行
         console.log(`正在檢查設施: ${actualFacilityName} 的晚上時段`);
+        
+        // 輸出頁面HTML，以便在控制台查看頁面結構
+        const html = await page.content();
+        console.log(`\n========== 詳情頁面HTML開始: ${actualFacilityName} ==========`);
+        console.log(html.substring(0, 5000) + "..."); // 輸出前5000個字符，避免日誌過長
+        console.log(`========== 詳情頁面HTML結束 ==========\n`);
+        
+        // 截圖詳情頁面，方便查看頁面結構
+        const detailScreenshotPath = path.join(
+          process.cwd(),
+          "e2e-result",
+          `detail-page-${actualFacilityName.replace(
+            /[\/\s\(\)（）]/g,
+            "_"
+          )}-${Date.now()}.png`
+        );
+        await page.screenshot({ path: detailScreenshotPath, fullPage: true });
+        console.log(`已保存詳情頁面截圖: ${detailScreenshotPath}`);
 
         const tables = await page.locator("table#Table1").all();
 
@@ -332,6 +363,27 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
           if (isEveningAvailable) {
             console.log(`找到晚上時段可用: ${actualFacilityName}-${dateText}`);
+            
+            // 輸出找到可用時段的表格HTML結構
+            const tableHtml = await table.evaluate(node => node.outerHTML);
+            console.log(`\n========== 可用時段表格HTML開始: ${actualFacilityName}-${dateText} ==========`);
+            console.log(tableHtml);
+            console.log(`========== 可用時段表格HTML結束 ==========\n`);
+
+            // 截圖記錄找到的可用時段
+            const availableSlotScreenshotPath = path.join(
+              process.cwd(),
+              "e2e-result",
+              `available-slot-${actualFacilityName.replace(
+                /[\/\s\(\)（）]/g,
+                "_"
+              )}-${formattedDate}-${Date.now()}.png`
+            );
+            await page.screenshot({
+              path: availableSlotScreenshotPath,
+              fullPage: true,
+            });
+            console.log(`已保存可用時段截圖: ${availableSlotScreenshotPath}`);
 
             // 生成唯一識別碼
             const elementUniqueKey = `${actualFacilityName}-${dateText}-evening`;
@@ -359,22 +411,89 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         }
 
         // 返回上一頁
-        console.log(`go back 返回上一頁`);
-        await page.mouse.wheel(0, 200);
-        await page.waitForTimeout(200);
-        await page.locator("#ucPCFooter_btnBack").click();
-        await page.waitForLoadState("domcontentloaded");
-        await page.waitForTimeout(1000);
+        console.log(`嘗試返回上一頁`);
+        try {
+          // 截圖：返回按鈕點擊前
+          const backButtonBeforeScreenshot = path.join(
+            process.cwd(),
+            "e2e-result",
+            `back-button-before-${Date.now()}.png`
+          );
+          await page.screenshot({
+            path: backButtonBeforeScreenshot,
+            fullPage: true,
+          });
+          console.log(`已保存返回按鈕點擊前截圖: ${backButtonBeforeScreenshot}`);
+
+          // 獲取按鈕HTML
+          const backButtonHtml = await page.locator("#ucPCFooter_btnBack").evaluate(node => node ? node.outerHTML : "未找到返回按鈕");
+          console.log(`返回按鈕HTML: ${backButtonHtml}`);
+          
+          // 滾動到按鈕位置
+          await page.mouse.wheel(0, 200);
+          await page.waitForTimeout(300);
+          
+          // 嘗試點擊返回按鈕
+          await page.locator("#ucPCFooter_btnBack").click({ timeout: 5000 });
+          await page.waitForTimeout(500);
+          await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
+          
+          // 截圖：返回按鈕點擊後
+          const backButtonAfterScreenshot = path.join(
+            process.cwd(),
+            "e2e-result",
+            `back-button-after-${Date.now()}.png`
+          );
+          await page.screenshot({
+            path: backButtonAfterScreenshot,
+            fullPage: true,
+          });
+          console.log(`已保存返回按鈕點擊後截圖: ${backButtonAfterScreenshot}`);
+          console.log(`返回上一頁成功`);
+        } catch (err) {
+          console.error(`返回按鈕點擊失敗: ${err}`);
+          // 保存錯誤截圖
+          const backButtonErrorScreenshot = path.join(
+            process.cwd(),
+            "e2e-result",
+            `back-button-error-${Date.now()}.png`
+          );
+          await page.screenshot({
+            path: backButtonErrorScreenshot,
+            fullPage: true,
+          });
+          console.log(`已保存返回按鈕錯誤截圖: ${backButtonErrorScreenshot}`);
+          
+          // 輸出當前頁面HTML幫助調試
+          const pageHtml = await page.content();
+          console.log(`頁面HTML(截取前5000字元): ${pageHtml.substring(0, 5000)}`);
+          
+          // 嘗試使用瀏覽器返回功能
+          try {
+            console.log(`嘗試使用瀏覽器goBack()功能返回上一頁`);
+            await page.goBack({ timeout: 10000 });
+            await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
+            console.log(`使用goBack()返回成功`);
+          } catch (backErr) {
+            console.error(`使用goBack()返回也失敗: ${backErr}`);
+            testIssues.push(`返回按鈕點擊失敗: ${err}`);
+          }
+        }
 
         // 取消所有選擇，再次點擊之前選擇的標記取消選擇
         console.log(`開始取消選擇`);
-        for (const marker of markersToSelect) {
-          await page.mouse.wheel(0, 100);
-          await page.waitForTimeout(200);
-          await marker.click();
-          await page.waitForTimeout(300);
+        try {
+          for (const marker of markersToSelect) {
+            await page.mouse.wheel(0, 100);
+            await page.waitForTimeout(200);
+            await marker.click();
+            await page.waitForTimeout(300);
+          }
+          console.log(`已取消所有選擇`);
+        } catch (err) {
+          console.error(`取消選擇失敗: ${err}`);
+          testIssues.push(`取消選擇失敗: ${err}`);
         }
-        console.log(`已取消所有選擇`);
       }
     }
 
