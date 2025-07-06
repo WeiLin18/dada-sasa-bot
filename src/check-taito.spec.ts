@@ -292,14 +292,14 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
           const markerText = await marker.textContent();
           console.log(`點擊標記: ${markerText}`);
           await page.mouse.wheel(0, 100);
-          await page.waitForTimeout(200);
+          await page.waitForTimeout(500);
           await marker.click();
-          await page.waitForTimeout(300);
+          await page.waitForTimeout(1000);
         }
 
         // 點擊下一步按鈕前進到詳情頁面
         console.log(`點擊"次へ >>"按鈕前進到詳情頁面`);
-        const nextButton = page.locator("input:has-text('次へ >>')");
+        const nextButton = page.locator("#ucPCFooter_btnForward");
 
         const periodHtml = await page.content();
         console.log(
