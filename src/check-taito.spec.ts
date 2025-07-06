@@ -1,9 +1,7 @@
 import type { Page, Locator } from "@playwright/test";
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import { config } from "../src/config";
 import { sendLineFlexMessage } from "./sendLineMessage";
-import * as fs from "fs";
-import * as path from "path";
 
 let page: Page;
 
@@ -150,12 +148,12 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       // 確保沒有空字符串
       const filteredContents = contents.filter((item) => item !== "");
 
-      // await sendLineFlexMessage(
-      //   title,
-      //   filteredContents,
-      //   buttonUrl,
-      //   buttonLabel
-      // );
+      await sendLineFlexMessage(
+        title,
+        filteredContents,
+        buttonUrl,
+        buttonLabel
+      );
     } else {
       console.log("未找到晚上時段可用位置");
       // 發送無可用位置的通知
@@ -167,12 +165,12 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       // 確保沒有空字符串
       const filteredContents = contents.filter((item) => item !== "");
 
-      // await sendLineFlexMessage(
-      //   title,
-      //   filteredContents,
-      //   buttonUrl,
-      //   buttonLabel
-      // );
+      await sendLineFlexMessage(
+        title,
+        filteredContents,
+        buttonUrl,
+        buttonLabel
+      );
     }
   });
 });
@@ -364,57 +362,19 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         console.log(`go back 返回上一頁`);
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(200);
-
-        try {
-          // 截圖返回操作前的頁面狀態
-          const beforeScreenshotPath = path.join(
-            process.cwd(),
-            "e2e-result",
-            `before-back-${Date.now()}.png`
-          );
-          await page.screenshot({ path: beforeScreenshotPath, fullPage: true });
-          console.log(`已保存返回前的截圖: ${beforeScreenshotPath}`);
-
-          // 嘗試點擊返回按鈕
-          await page.locator("#ucPCFooter_btnBack").click({ timeout: 30000 });
-          await page.waitForLoadState("domcontentloaded");
-          await page.waitForTimeout(1000);
-
-          // 截圖返回操作後的頁面狀態
-          const afterScreenshotPath = path.join(
-            process.cwd(),
-            "e2e-result",
-            `after-back-${Date.now()}.png`
-          );
-          await page.screenshot({ path: afterScreenshotPath, fullPage: true });
-          console.log(`已保存返回後的截圖: ${afterScreenshotPath}`);
-        } catch (error) {
-          console.error(`點擊返回按鈕失敗: ${error.message}`);
-
-          // 出錯時截圖並保存
-          const errorScreenshotPath = path.join(
-            process.cwd(),
-            "e2e-result",
-            `back-error-${Date.now()}.png`
-          );
-          await page.screenshot({ path: errorScreenshotPath, fullPage: true });
-          console.log(`已保存錯誤截圖: ${errorScreenshotPath}`);
-
-          // 使用瀏覽器的返回功能作為備用方案
-          console.log(`嘗試使用瀏覽器返回功能作為備用方案`);
-          await page.goBack();
-          await page.waitForLoadState("domcontentloaded");
-          await page.waitForTimeout(1000);
-        }
+        await page.locator("#ucPCFooter_btnBack").click();
+        await page.waitForLoadState("domcontentloaded");
+        await page.waitForTimeout(1000);
 
         // 取消所有選擇，再次點擊之前選擇的標記取消選擇
-        console.log(`取消所有選擇`);
+        console.log(`開始取消選擇`);
         for (const marker of markersToSelect) {
           await page.mouse.wheel(0, 100);
           await page.waitForTimeout(200);
           await marker.click();
           await page.waitForTimeout(300);
         }
+        console.log(`已取消所有選擇`);
       }
     }
 
@@ -424,109 +384,14 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
       await page.mouse.wheel(1200, 500);
       await page.waitForTimeout(1000);
+      const tableFooter = await page.locator("#TableFoot");
+      const nextRightButton = await tableFooter.locator(
+        "a:has-text('次の期間を表示')"
+      );
 
-      // 改進: 使用更可靠的定位器並添加調試信息
-      try {
-        // 記錄當前頁面URL和標題，幫助調試
-        const currentUrl = page.url();
-        const currentTitle = await page.title();
-        console.log(`目前頁面URL: ${currentUrl}`);
-        console.log(`目前頁面標題: ${currentTitle}`);
-
-        // 檢查並輸出所有可能的下一頁按鈕
-        const allInputs = await page.locator('input[type="submit"]').all();
-        console.log(`頁面上找到 ${allInputs.length} 個提交按鈕`);
-
-        for (let i = 0; i < allInputs.length; i++) {
-          const inputValue = await allInputs[i].getAttribute("value");
-          const inputId = await allInputs[i].getAttribute("id");
-          const isVisible = await allInputs[i].isVisible();
-          console.log(
-            `按鈕 ${
-              i + 1
-            }: id="${inputId}", value="${inputValue}", 可見=${isVisible}`
-          );
-        }
-
-        // 嘗試多種可能的定位方式
-        const nextRightButton = await page
-          .locator(
-            "input[value='次の月へ'], input[value='次の週へ'], input[value='次の日へ'], input:has-text('次の')"
-          )
-          .first();
-
-        // 檢查元素是否存在
-        const isVisible = await nextRightButton.isVisible();
-        console.log(`下一頁按鈕是否可見: ${isVisible}`);
-
-        if (!isVisible) {
-          // 截圖並保存，方便調試
-          const screenshotPath = path.join(
-            process.cwd(),
-            "e2e-result",
-            `next-button-not-found-${Date.now()}.png`
-          );
-          await page.screenshot({ path: screenshotPath, fullPage: true });
-          console.log(`已保存找不到下一頁按鈕的截圖: ${screenshotPath}`);
-
-          // 記錄頁面HTML，幫助調試
-          const html = await page.content();
-          console.log(`頁面HTML開始 ==================`);
-          console.log(html.substring(0, 2000) + "..."); // 只輸出前2000個字符，避免日誌過長
-          console.log(`頁面HTML結束 ==================`);
-
-          const htmlPath = path.join(
-            process.cwd(),
-            "e2e-result",
-            `page-html-${Date.now()}.html`
-          );
-          fs.writeFileSync(htmlPath, html);
-          console.log(`已保存頁面HTML: ${htmlPath}`);
-
-          // 嘗試通過XPath查找按鈕
-          console.log(`嘗試通過XPath查找下一頁按鈕`);
-          const xpathButtons = await page
-            .locator("//input[contains(@value, '次')]")
-            .all();
-          console.log(`XPath找到 ${xpathButtons.length} 個可能的下一頁按鈕`);
-
-          if (xpathButtons.length > 0) {
-            console.log(`使用XPath找到的第一個按鈕`);
-            await xpathButtons[0].click();
-          } else {
-            throw new Error("無法找到下一頁按鈕");
-          }
-        } else {
-          await nextRightButton.click();
-        }
-
-        await page.waitForLoadState("domcontentloaded");
-        await page.waitForTimeout(1000); // 稍微等待久一點確保頁面加載完成
-      } catch (error) {
-        console.error(`點擊下一頁按鈕失敗: ${error.message}`);
-
-        // 出錯時截圖並保存
-        const errorScreenshotPath = path.join(
-          process.cwd(),
-          "e2e-result",
-          `error-${Date.now()}.png`
-        );
-        await page.screenshot({ path: errorScreenshotPath, fullPage: true });
-        console.log(`已保存錯誤截圖: ${errorScreenshotPath}`);
-
-        // 記錄頁面HTML，幫助調試
-        const html = await page.content();
-        const htmlPath = path.join(
-          process.cwd(),
-          "e2e-result",
-          `error-html-${Date.now()}.html`
-        );
-        fs.writeFileSync(htmlPath, html);
-        console.log(`已保存錯誤頁面HTML: ${htmlPath}`);
-
-        // 繼續執行下一個頁面的處理
-        console.log("因錯誤跳過此頁面，繼續處理其他頁面");
-      }
+      await nextRightButton.click();
+      await page.waitForLoadState("domcontentloaded");
+      await page.waitForTimeout(1000); // 稍微等待久一點確保頁面加載完成
 
       console.log(`已進入下一頁`);
     } else {
