@@ -38,7 +38,7 @@ const facilityTypes = [
 test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   // 收集測試過程中的警告和錯誤，用於最終報告
   const testIssues: string[] = [];
-  
+
   // 確保截圖目錄存在
   const screenshotDir = path.join(process.cwd(), "e2e-result");
   if (!fs.existsSync(screenshotDir)) {
@@ -299,9 +299,17 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
         // 點擊下一步按鈕前進到詳情頁面
         console.log(`點擊"次へ >>"按鈕前進到詳情頁面`);
-        const nextButton = page.locator("#ucPCFooter_pnlNextBtn");
+        const nextButton = page.locator("input:has-text('次へ >>')");
+
+        const periodHtml = await page.content();
+        console.log(
+          `\n========== 詳情頁面HTML開始: ${actualFacilityName} ==========`
+        );
+        console.log(periodHtml.substring(0, 10000) + "..."); // 輸出前10000個字符，避免日誌過長
+        console.log(`========== 詳情頁面HTML結束 ==========\n`);
+
         await page.mouse.wheel(0, 100);
-        await page.waitForTimeout(200);
+        await page.waitForTimeout(1000);
         await nextButton.click();
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(500);
@@ -311,13 +319,15 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
         // 基於您提供的HTML結構直接查找包含設施名稱的行
         console.log(`正在檢查設施: ${actualFacilityName} 的晚上時段`);
-        
+
         // 輸出頁面HTML，以便在控制台查看頁面結構
         const html = await page.content();
-        console.log(`\n========== 詳情頁面HTML開始: ${actualFacilityName} ==========`);
+        console.log(
+          `\n========== 詳情頁面HTML開始: ${actualFacilityName} ==========`
+        );
         console.log(html.substring(0, 5000) + "..."); // 輸出前5000個字符，避免日誌過長
         console.log(`========== 詳情頁面HTML結束 ==========\n`);
-        
+
         // 截圖詳情頁面，方便查看頁面結構
         const detailScreenshotPath = path.join(
           process.cwd(),
@@ -363,10 +373,12 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
           if (isEveningAvailable) {
             console.log(`找到晚上時段可用: ${actualFacilityName}-${dateText}`);
-            
+
             // 輸出找到可用時段的表格HTML結構
-            const tableHtml = await table.evaluate(node => node.outerHTML);
-            console.log(`\n========== 可用時段表格HTML開始: ${actualFacilityName}-${dateText} ==========`);
+            const tableHtml = await table.evaluate((node) => node.outerHTML);
+            console.log(
+              `\n========== 可用時段表格HTML開始: ${actualFacilityName}-${dateText} ==========`
+            );
             console.log(tableHtml);
             console.log(`========== 可用時段表格HTML結束 ==========\n`);
 
@@ -423,21 +435,25 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
             path: backButtonBeforeScreenshot,
             fullPage: true,
           });
-          console.log(`已保存返回按鈕點擊前截圖: ${backButtonBeforeScreenshot}`);
+          console.log(
+            `已保存返回按鈕點擊前截圖: ${backButtonBeforeScreenshot}`
+          );
 
           // 獲取按鈕HTML
-          const backButtonHtml = await page.locator("#ucPCFooter_btnBack").evaluate(node => node ? node.outerHTML : "未找到返回按鈕");
+          const backButtonHtml = await page
+            .locator("#ucPCFooter_btnBack")
+            .evaluate((node) => (node ? node.outerHTML : "未找到返回按鈕"));
           console.log(`返回按鈕HTML: ${backButtonHtml}`);
-          
+
           // 滾動到按鈕位置
           await page.mouse.wheel(0, 200);
           await page.waitForTimeout(300);
-          
+
           // 嘗試點擊返回按鈕
           await page.locator("#ucPCFooter_btnBack").click({ timeout: 5000 });
           await page.waitForTimeout(500);
           await page.waitForLoadState("domcontentloaded", { timeout: 10000 });
-          
+
           // 截圖：返回按鈕點擊後
           const backButtonAfterScreenshot = path.join(
             process.cwd(),
@@ -463,11 +479,13 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
             fullPage: true,
           });
           console.log(`已保存返回按鈕錯誤截圖: ${backButtonErrorScreenshot}`);
-          
+
           // 輸出當前頁面HTML幫助調試
           const pageHtml = await page.content();
-          console.log(`頁面HTML(截取前5000字元): ${pageHtml.substring(0, 5000)}`);
-          
+          console.log(
+            `頁面HTML(截取前5000字元): ${pageHtml.substring(0, 5000)}`
+          );
+
           // 嘗試使用瀏覽器返回功能
           try {
             console.log(`嘗試使用瀏覽器goBack()功能返回上一頁`);
