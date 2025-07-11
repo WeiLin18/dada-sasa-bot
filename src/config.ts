@@ -6,7 +6,7 @@ export const config = {
   lineChannelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   lineChannelSecret: process.env.LINE_CHANNEL_SECRET,
   lineUserId: process.env.LINE_USER_ID,
-  lineGroupId: process.env.LINE_GROUP_ID,
+  lineGroupId: process.env.LINE_GROUP,
   // sumida
   password: process.env.PASSWORD,
   userId: process.env.USER_ID,
