@@ -143,19 +143,7 @@ test("Check availability", async ({ browser }) => {
             const dayTimeMap = ["9-12", "12-15", "15-18", "18-21🔥"];
             const nightTimeMap = ["21-22:30🌙"];
 
-            // Check if it's a weekday (not Saturday or Sunday)
-            const isWeekday = weekday !== "六" && weekday !== "日";
-
-            // For weekdays, filter out morning and afternoon slots
-            let filteredDayTimeMap = [...dayTimeMap];
-            if (isWeekday) {
-              filteredDayTimeMap = dayTimeMap.filter((slot) =>
-                slot.includes("18-21")
-              );
-            }
-
-            const timeMap =
-              type === "night" ? nightTimeMap : filteredDayTimeMap;
+            const timeMap = type === "night" ? nightTimeMap : dayTimeMap;
             // Extract available time slots from the detailed view
             const timeSlots = await page.locator("td.f-sizeup").all();
 
