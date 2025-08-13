@@ -94,18 +94,18 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   await page.goto("https://shisetsu.city.taito.lg.jp/");
   await page.waitForLoadState("domcontentloaded");
 
-  // 步驟 1：登入系統
-  await test.step("登入", async () => {
-    console.log("正在登入預約系統...");
-    await page.getByRole("button", { name: "ログインする" }).click();
-    await page.waitForLoadState("domcontentloaded");
+  // // 步驟 1：登入系統
+  // await test.step("登入", async () => {
+  //   console.log("正在登入預約系統...");
+  //   await page.getByRole("button", { name: "ログインする" }).click();
+  //   await page.waitForLoadState("domcontentloaded");
 
-    await page.locator("#txtID").fill(config.taiUserId as string);
-    await page.locator("#txtPass").fill(config.taiPassword as string);
-    await page.getByRole("button", { name: "ログイン" }).click();
-    await page.waitForLoadState("domcontentloaded");
-    console.log("登入成功");
-  });
+  //   await page.locator("#txtID").fill(config.taiUserId as string);
+  //   await page.locator("#txtPass").fill(config.taiPassword as string);
+  //   await page.getByRole("button", { name: "ログイン" }).click();
+  //   await page.waitForLoadState("domcontentloaded");
+  //   console.log("登入成功");
+  // });
 
   // 步驟 2：導航到目標設施頁面
   await test.step("導航到設施頁面", async () => {
