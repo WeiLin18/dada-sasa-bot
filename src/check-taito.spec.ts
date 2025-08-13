@@ -28,7 +28,6 @@ interface SlotsByDateMap {
 
 // 定義需要選擇的設施類型
 const facilityTypes = [
-  "第１競技場（全面）",
   "第１競技場（半面Ａ）",
   "第１競技場（半面Ｂ）",
   "第２競技場",
@@ -116,6 +115,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       .click();
     await page.getByRole("button", { name: "次へ >>" }).click();
     await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1000);
     await page.getByRole("button", { name: "1ヶ月" }).click();
     await page.getByRole("button", { name: "横表示" }).click();
     await page.getByRole("button", { name: "次へ >>" }).click();
@@ -127,6 +127,8 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   await test.step("搜尋晚上時段可用性", async () => {
     // 尋找並選擇晚上時段（18:00～21:00）有○的位置
     console.log("正在尋找晚上時段（18:00～21:00）有○的位置...");
+    await page.waitForTimeout(1000);
+
     const eveningSlots = await selectAvailableSlots();
 
     // 如果找到晚上時段，報告這些位置
@@ -250,6 +252,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
     for (const facility of facilityTypes) {
       console.log(`正在處理設施: ${facility}`);
 
+      await page.waitForTimeout(1000);
       // 先檢查整個表格結構
       const table = await page.locator("table#dlRepeat_ctl00_tpItem_dgTable");
 
