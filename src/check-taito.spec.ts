@@ -295,7 +295,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
           const markerText = await marker.textContent();
           console.log(`點擊標記: ${markerText}`);
           await page.mouse.wheel(0, 100);
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(1000);
           await marker.click();
           await page.waitForTimeout(1000);
         }
@@ -307,7 +307,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         console.log(
           `\n========== 詳情頁面HTML開始: ${actualFacilityName} ==========`
         );
-        console.log(periodHtml.substring(0, 10000) + "..."); // 輸出前10000個字符，避免日誌過長
+        console.log(periodHtml); // 輸出前10000個字符，避免日誌過長
         console.log(`========== 詳情頁面HTML結束 ==========\n`);
 
         await page.mouse.wheel(0, 200);
