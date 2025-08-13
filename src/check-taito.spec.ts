@@ -302,7 +302,6 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
         // 點擊下一步按鈕前進到詳情頁面
         console.log(`點擊"次へ >>"按鈕前進到詳情頁面`);
-        const nextButton = page.locator("#ucPCFooter_btnForward");
 
         const periodHtml = await page.content();
         console.log(
@@ -311,11 +310,12 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
         console.log(periodHtml.substring(0, 10000) + "..."); // 輸出前10000個字符，避免日誌過長
         console.log(`========== 詳情頁面HTML結束 ==========\n`);
 
-        await page.mouse.wheel(0, 100);
+        await page.mouse.wheel(0, 200);
         await page.waitForTimeout(1000);
+        const nextButton = page.locator("#ucPCFooter_btnForward");
         await nextButton.click();
         await page.waitForLoadState("domcontentloaded");
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         // 在詳情頁面記錄晚上時段可用的位置
         console.log(`正在詳情頁面尋找晚上時段可用的位置`);
