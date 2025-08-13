@@ -90,9 +90,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   // 設定較長的導航超時時間
   page.setDefaultTimeout(600000);
 
-  await page.goto(
-    "https://shisetsu.city.taito.lg.jp/(S(w1a3hv450lymhd45dvrxmpef))/Wg_NichijiSentaku.aspx"
-  );
+  await page.goto("https://shisetsu.city.taito.lg.jp/");
   await page.waitForLoadState("domcontentloaded");
 
   // // 步驟 1：登入系統
@@ -108,22 +106,22 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   //   console.log("登入成功");
   // });
 
-  // // 步驟 2：導航到目標設施頁面
-  // await test.step("導航到設施頁面", async () => {
-  //   await page.getByRole("button", { name: "運動施設" }).click();
-  //   await page.waitForLoadState("domcontentloaded");
-  //   await page
-  //     .getByRole("button", { name: "台東リバーサイドＳＣ体育館" })
-  //     .click();
-  //   await page.getByRole("button", { name: "次へ >>" }).click();
-  //   await page.waitForLoadState("domcontentloaded");
-  //   await page.waitForTimeout(1000);
-  //   await page.getByRole("button", { name: "1ヶ月" }).click();
-  //   await page.getByRole("button", { name: "横表示" }).click();
-  await page.getByRole("button", { name: "次へ >>" }).click();
-  await page.waitForLoadState("domcontentloaded");
-  console.log("已導航到可用性日曆");
-  // });
+  // 步驟 2：導航到目標設施頁面
+  await test.step("導航到設施頁面", async () => {
+    await page.getByRole("button", { name: "運動施設" }).click();
+    await page.waitForLoadState("domcontentloaded");
+    await page
+      .getByRole("button", { name: "台東リバーサイドＳＣ体育館" })
+      .click();
+    await page.getByRole("button", { name: "次へ >>" }).click();
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1000);
+    await page.getByRole("button", { name: "1ヶ月" }).click();
+    await page.getByRole("button", { name: "横表示" }).click();
+    await page.getByRole("button", { name: "次へ >>" }).click();
+    await page.waitForLoadState("domcontentloaded");
+    console.log("已導航到可用性日曆");
+  });
 
   // 步驟 3：搜尋晚上時段可用性並報告
   await test.step("搜尋晚上時段可用性", async () => {
