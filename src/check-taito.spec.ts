@@ -312,7 +312,7 @@ async function selectAvailableSlots(): Promise<SlotInfo[]> {
 
         await page.mouse.wheel(0, 200);
         await page.waitForTimeout(1000);
-        const nextButton = page.locator("#ucPCFooter_btnForward");
+        const nextButton = page.locator("#dlRepeat_ctl00_tpItem_lnkNextLeft");
         await nextButton.click();
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(1000);
