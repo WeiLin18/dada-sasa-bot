@@ -55,8 +55,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       .padStart(2, "0")}`
   );
 
-  const shouldRunTest = () => {
-    return true;
+  const isPriorityTime = () => {
     return config.priorityHours.some((hour) => {
       // 如果當前小時就是優先小時，只在前15分鐘內執行
       if (japanHour === hour) {
@@ -70,26 +69,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
     });
   };
 
-  if (!shouldRunTest()) {
-    console.log(
-      `當前時間不在指定的優先時間 [${config.priorityHours.join(
-        ", "
-      )}] 的前後15分鐘內，跳過執行`
-    );
-    test.skip();
-    return;
-  }
-
-  console.log(
-    `當前時間在指定的優先時間 [${config.priorityHours.join(
-      ", "
-    )}] 的前後15分鐘內，開始執行測試`
-  );
-
   page = await browser.newPage();
-  // 設定較長的導航超時時間
-  page.setDefaultTimeout(600000);
-
   await page.goto("https://shisetsu.city.taito.lg.jp/");
   await page.waitForLoadState("domcontentloaded");
 
@@ -134,9 +114,9 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
 
     // 如果找到晚上時段，報告這些位置
     if (eveningSlots.length > 0) {
-      console.log(`找到 ${eveningSlots.length} 個晚上時段可用位置`);
+      console.log(`台東 - 找到 ${eveningSlots.length} 個晚上時段可用位置`);
 
-      console.log("依日期顯示可用位置：");
+      console.log("台東 - 依日期顯示可用位置：");
 
       // 準備要發送的訊息內容
       const title = `🏸 台東施設情報（晚上時段）`;
@@ -157,7 +137,8 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
         buttonLabel
       );
     } else {
-      console.log("未找到晚上時段可用位置");
+      if (!isPriorityTime()) return;
+      console.log("台東 - 未找到晚上時段可用位置");
       // 發送無可用位置的通知
       const title = `🏸 台東施設情報`;
       const contents = ["目前沒有晚上時段可用位置"];
@@ -183,14 +164,14 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
 async function getAvailableSlots(): Promise<string[]> {
   // 設定要處理的頁數，預設為2頁
   const date: string[] = [];
-  const pagesToProcess = 3;
+  const pagesToProcess = 2;
 
   for (let pageNum = 0; pageNum < pagesToProcess; pageNum++) {
-    console.log(`正在處理第 ${pageNum + 1} 頁`);
+    console.log(`台東 - 正在處理第 ${pageNum + 1} 頁`);
 
     // 遍歷每個設施類型
     for (const facility of facilityTypes) {
-      console.log(`正在處理設施: ${facility}`);
+      console.log(`台東 - 正在處理設施: ${facility}`);
 
       await page.waitForTimeout(1000);
       // 先檢查整個表格結構
@@ -210,14 +191,14 @@ async function getAvailableSlots(): Promise<string[]> {
           (await facilityNameCell.textContent())?.trim() || "";
 
         // 點擊當前設施行
-        console.log(`正在點擊設施行: ${actualFacilityName}`);
+        console.log(`台東 - 正在確認設施: ${actualFacilityName}`);
 
         // 找到所有可用的標記（△和○）
         const availableMarkers = await facilityRow
           .locator('a:has-text("△"), a:has-text("○")')
           .all()
           .then(async (markers) => {
-            const results = [];
+            const results: { href: string; text: string; date: string }[] = [];
             for (const marker of markers) {
               const href = await marker.getAttribute("href");
               const text = await marker.textContent();
@@ -242,10 +223,10 @@ async function getAvailableSlots(): Promise<string[]> {
             return results;
           });
 
-        console.log(`找到 ${availableMarkers.length} 個可用標記`);
+        console.log(`台東 - 找到 ${availableMarkers.length} 個可用標記`);
 
         if (availableMarkers.length === 0) {
-          console.log(`該行沒有可用標記，跳過`);
+          console.log(`台東 - 該行沒有可用標記，跳過`);
           continue;
         }
 
@@ -262,16 +243,13 @@ async function getAvailableSlots(): Promise<string[]> {
     if (pageNum < pagesToProcess - 1) {
       console.log(`點擊右箭頭進入下一頁`);
 
-      await page.mouse.wheel(1200, 500);
-      await page.waitForTimeout(1000);
       const tableFooter = await page.locator("#TableFoot");
       const nextRightButton = await tableFooter.locator(
         "a:has-text('次の期間を表示')"
       );
-
       await nextRightButton.click();
       await page.waitForLoadState("domcontentloaded");
-      await page.waitForTimeout(1000); // 稍微等待久一點確保頁面加載完成
+      await page.waitForTimeout(3000); // 稍微等待久一點確保頁面加載完成
 
       console.log(`已進入下一頁`);
     } else {
