@@ -36,8 +36,6 @@ const sportAreaList = [
 const sportNextAreaList = ["サブアリーナ １／２面①", "サブアリーナ １／２面②"];
 
 const nightAreaList = [
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／２面）①",
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／２面）②",
   "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）①",
   "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）②",
   "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）③",
@@ -149,7 +147,15 @@ test("Check availability", async ({ browser }) => {
               if (text && text.trim() === "○") {
                 // Map the position to the timeMap (if within bounds)
                 if (k < timeMap.length) {
-                  availableTimeSlots.push(timeMap[k]);
+                  const timeSlot = timeMap[k];
+                  // Filter out unwanted time slots only on weekdays: "9-12", "12-15", "15-18"
+                  const isWeekend = weekday === "六" || weekday === "日";
+                  if (
+                    isWeekend ||
+                    (timeSlot !== "9-12" && timeSlot !== "12-15")
+                  ) {
+                    availableTimeSlots.push(timeSlot);
+                  }
                 }
               }
             }
