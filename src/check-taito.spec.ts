@@ -119,7 +119,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       console.log("台東 - 依日期顯示可用位置：");
 
       // 準備要發送的訊息內容
-      const title = `🏸 台東施設情報（晚上時段）`;
+      const title = `🏸 台東時段釋出🔥`;
       const contents = eveningSlots;
 
       // 發送摘要通知
