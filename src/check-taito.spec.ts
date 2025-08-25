@@ -103,6 +103,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
   });
 
   let eveningSlots: string[] = [];
+  let twoMonthEveningSlots: string[] = [];
 
   // 步驟 3：搜尋晚上時段可用性並報告
   await test.step("搜尋晚上時段可用性", async () => {
@@ -112,16 +113,50 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
     eveningSlots = await getAvailableSlots();
   });
 
+  await test.step("搜尋兩個月後的晚上時段可用性", async () => {
+    console.log("正在尋找兩個月後的晚上時段（18:00～21:00）有○的位置...");
+    await page.goto("https://shisetsu.city.taito.lg.jp/");
+    await page.waitForLoadState("domcontentloaded");
+
+    await test.step("導航到設施頁面", async () => {
+      await page.getByRole("button", { name: "運動施設" }).click();
+      await page.waitForLoadState("domcontentloaded");
+      await page
+        .getByRole("button", { name: "台東リバーサイドＳＣ体育館" })
+        .click();
+      await page.getByRole("button", { name: "次へ >>" }).click();
+      await page.waitForLoadState("domcontentloaded");
+      await page.waitForTimeout(1000);
+
+      const monthInput = page.locator("#txtMonth");
+      const month = new Date().getMonth() + 1;
+      await monthInput.fill((month + 2).toString());
+      console.log("已填寫月份", month + 2);
+      await page.getByRole("button", { name: "1ヶ月" }).click();
+      await page.getByRole("button", { name: "夜間" }).click();
+      await page.getByRole("button", { name: "横表示" }).click();
+      await page.getByRole("button", { name: "次へ >>" }).click();
+      await page.waitForLoadState("domcontentloaded");
+      console.log("已導航到可用性日曆");
+    });
+
+    await test.step("搜尋兩個月後的晚上時段可用性", async () => {
+      console.log("正在尋找兩個月後的晚上時段（18:00～21:00）有○的位置...");
+      await page.waitForTimeout(1000);
+      twoMonthEveningSlots = await getAvailableSlots();
+    });
+  });
+
   await test.step("發送通知", async () => {
     // 如果找到晚上時段，報告這些位置
-    if (eveningSlots.length > 0) {
+    if (eveningSlots.length > 0 || twoMonthEveningSlots.length > 0) {
       console.log(`台東 - 找到 ${eveningSlots.length} 個晚上時段可用位置`);
 
       console.log("台東 - 依日期顯示可用位置：");
 
       // 準備要發送的訊息內容
       const title = `🏸 台東時段釋出🔥`;
-      const contents = eveningSlots;
+      const contents = [...eveningSlots, ...twoMonthEveningSlots];
 
       // 發送摘要通知
       const buttonUrl = "https://shisetsu.city.taito.lg.jp/";
@@ -165,7 +200,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
 async function getAvailableSlots(): Promise<string[]> {
   // 設定要處理的頁數，預設為2頁
   const date: string[] = [];
-  const pagesToProcess = 4;
+  const pagesToProcess = 2;
 
   for (let pageNum = 0; pageNum < pagesToProcess; pageNum++) {
     console.log(`台東 - 正在處理第 ${pageNum + 1} 頁`);
