@@ -28,6 +28,7 @@ interface SlotsByDateMap {
 
 // 定義需要選擇的設施類型
 const facilityTypes = [
+  "第１競技場（全面）",
   "第１競技場（半面Ａ）",
   "第１競技場（半面Ｂ）",
   "第２競技場",
@@ -35,9 +36,6 @@ const facilityTypes = [
 
 // 在測試最開始增加錯誤收集功能
 test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
-  // 收集測試過程中的警告和錯誤，用於最終報告
-  const testIssues: string[] = [];
-
   // 確保截圖目錄存在
   const screenshotDir = path.join(process.cwd(), "e2e-result");
   if (!fs.existsSync(screenshotDir)) {
@@ -104,14 +102,17 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
     console.log("已導航到可用性日曆");
   });
 
+  let eveningSlots: string[] = [];
+
   // 步驟 3：搜尋晚上時段可用性並報告
   await test.step("搜尋晚上時段可用性", async () => {
     // 尋找並選擇晚上時段（18:00～21:00）有○的位置
     console.log("正在尋找晚上時段（18:00～21:00）有○的位置...");
     await page.waitForTimeout(1000);
+    eveningSlots = await getAvailableSlots();
+  });
 
-    const eveningSlots = await getAvailableSlots();
-
+  await test.step("發送通知", async () => {
     // 如果找到晚上時段，報告這些位置
     if (eveningSlots.length > 0) {
       console.log(`台東 - 找到 ${eveningSlots.length} 個晚上時段可用位置`);
@@ -164,7 +165,7 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
 async function getAvailableSlots(): Promise<string[]> {
   // 設定要處理的頁數，預設為2頁
   const date: string[] = [];
-  const pagesToProcess = 2;
+  const pagesToProcess = 4;
 
   for (let pageNum = 0; pageNum < pagesToProcess; pageNum++) {
     console.log(`台東 - 正在處理第 ${pageNum + 1} 頁`);
@@ -173,7 +174,7 @@ async function getAvailableSlots(): Promise<string[]> {
     for (const facility of facilityTypes) {
       console.log(`台東 - 正在處理設施: ${facility}`);
 
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(3000);
       // 先檢查整個表格結構
       const table = await page.locator("table#dlRepeat_ctl00_tpItem_dgTable");
 
@@ -232,6 +233,12 @@ async function getAvailableSlots(): Promise<string[]> {
 
         // 處理找到的可用時段
         for (const marker of availableMarkers) {
+          // 檢查日期是否在排除清單中
+          if (config.excludedDates.includes(marker.date)) {
+            console.log(`跳過排除日期: ${marker.date}`);
+            continue;
+          }
+
           const slotInfo = `${actualFacilityName} - ${marker.date} - ${marker.text}`;
           date.push(slotInfo);
           console.log(`找到可用時段: ${slotInfo}`);

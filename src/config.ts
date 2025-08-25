@@ -17,5 +17,10 @@ export const config = {
   webhookPort: "3000",
   // Time-based notification settings
   priorityHours: [8, 20], // Hours when notifications should always be sent
-  rangeMinutes: Number(process.env.RANGE_MINUTES || 10), // Minutes before and after priority hours to send notifications
+  rangeMinutes: Number(process.env.RANGE_MINUTES || 10), // Minutes before and after priority hours to send notifications,
+
+  // 要過濾掉的日期，格式為 "YYYY/MM/DD"
+  excludedDates: process.env.EXCLUDED_DATES
+    ? process.env.EXCLUDED_DATES.split(",")
+    : ["2025/08/30"],
 };
