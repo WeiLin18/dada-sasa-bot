@@ -152,7 +152,9 @@ test("Check availability", async ({ browser }) => {
                   const isWeekend = weekday === "六" || weekday === "日";
                   if (
                     isWeekend ||
-                    (timeSlot !== "9-12" && timeSlot !== "12-15")
+                    (timeSlot !== "9-12" &&
+                      timeSlot !== "12-15" &&
+                      timeSlot !== "15-18")
                   ) {
                     availableTimeSlots.push(timeSlot);
                   }
