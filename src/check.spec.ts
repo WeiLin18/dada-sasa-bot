@@ -127,6 +127,18 @@ test("Check availability", async ({ browser }) => {
               weekday = weekdays[dateObj.getDay()];
             }
 
+            // 检查日期是否在排除清单中
+            const formattedDate = dateStr
+              ? `${dateStr.slice(0, 4)}/${dateStr.slice(4, 6)}/${dateStr.slice(
+                  6,
+                  8
+                )}`
+              : "";
+            if (formattedDate && config.excludedDates.includes(formattedDate)) {
+              console.log(`跳過排除日期: ${formattedDate}`);
+              continue;
+            }
+
             // Click on the cell to see available time slots
             await cell.click();
             await page.waitForLoadState("domcontentloaded");
