@@ -38,7 +38,7 @@ cp .env.example .env
 
 ```
 # Line Messaging API credentials
-LINE_CHANNEL_ACCESS_TOKEN=your_token_here
+BOT_POTTER_LINE_CHANNEL_ACCESS_TOKEN=your_token_here
 LINE_USER_ID=your_user_id_here
 
 # Sumida Gym login credentials
@@ -47,9 +47,9 @@ PASSWORD=your_gym_password
 ```
 
 3. If using GitHub Actions, add the following secrets in your repository's Settings > Secrets and variables > Actions:
-   - `LINE_CHANNEL_ACCESS_TOKEN`: Your LINE messaging API token
+   - `BOT_POTTER_LINE_CHANNEL_ACCESS_TOKEN`: Your LINE messaging API token
    - `LINE_USER_ID`: Your LINE user ID
-   - `LINE_GROUP_ID`: Your LINE group ID
+   - `BOT_POTTER_LINE_GROUP_ID`: Your LINE group ID
    - `USER_ID`: Your gym system user ID
    - `PASSWORD`: Your gym system password
 

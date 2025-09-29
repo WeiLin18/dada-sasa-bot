@@ -4,7 +4,7 @@ export async function getUserLineID() {
   const response = await fetch("https://api.line.me/v2/bot/followers/ids", {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${config.lineChannelAccessToken}`,
+      Authorization: `Bearer ${config.botPotterLineChannelAccessToken}`,
     },
   });
 
@@ -33,15 +33,40 @@ export async function sendLineFlexMessage(
   buttonLabel?: string
 ) {
   try {
+    // 根據日期決定使用哪個 LINE channel
+    const currentDate = new Date();
+    const dayOfMonth = currentDate.getDate();
+
+    // 15號前使用 POKOBI，15號後使用 POTTER
+    const isFirstHalf = dayOfMonth <= 15;
+    const accessToken = isFirstHalf
+      ? config.botPokobiLineChannelAccessToken
+      : config.botPotterLineChannelAccessToken;
+    const groupId = isFirstHalf
+      ? config.botPokobiLineGroupId
+      : config.botPotterLineGroupId;
+
+    console.log(
+      `使用 ${
+        isFirstHalf ? "POKOBI" : "POTTER"
+      } channel (日期: ${dayOfMonth}號)`
+    );
+
     // 检查必要的配置
-    if (!config.lineChannelAccessToken) {
+    if (!accessToken) {
       console.error(
-        "LINE_CHANNEL_ACCESS_TOKEN is not set in environment variables"
+        `${
+          isFirstHalf ? "BOT_POKOBI" : "BOT_POTTER"
+        }_LINE_CHANNEL_ACCESS_TOKEN is not set in environment variables`
       );
       return false;
     }
-    if (!config.lineGroupId?.length) {
-      console.error("LINE_GROUP_ID is not set in environment variables");
+    if (!groupId?.length) {
+      console.error(
+        `${
+          isFirstHalf ? "BOT_POKOBI" : "BOT_POTTER"
+        }_LINE_GROUP_ID is not set in environment variables`
+      );
       return false;
     }
 
@@ -71,7 +96,7 @@ export async function sendLineFlexMessage(
           type: "box",
           layout: "vertical",
           contents: contents
-            .filter(content => content && content.trim() !== "") // 確保不含空字符串
+            .filter((content) => content && content.trim() !== "") // 確保不含空字符串
             .map((content) => ({
               type: "text",
               text: content || " ", // 使用空格替代可能的空字符串
@@ -105,10 +130,10 @@ export async function sendLineFlexMessage(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${config.lineChannelAccessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        to: config.lineGroupId,
+        to: groupId,
         messages: [flexMessage],
       }),
     });
@@ -129,23 +154,25 @@ export async function sendLineFlexMessage(
 export async function sendLineMessage(message: string) {
   try {
     // First, check if environment variables are set
-    if (!config.lineChannelAccessToken) {
+    if (!config.botPotterLineChannelAccessToken) {
       console.error(
-        "LINE_CHANNEL_ACCESS_TOKEN is not set in environment variables"
+        "BOT_POTTER_LINE_CHANNEL_ACCESS_TOKEN is not set in environment variables"
       );
     }
-    if (!config.lineGroupId) {
-      console.error("LINE_GROUP_ID is not set in environment variables");
+    if (!config.botPotterLineGroupId) {
+      console.error(
+        "BOT_POTTER_LINE_GROUP_ID is not set in environment variables"
+      );
     }
 
     const response = await fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${config.lineChannelAccessToken}`,
+        Authorization: `Bearer ${config.botPotterLineChannelAccessToken}`,
       },
       body: JSON.stringify({
-        to: config.lineGroupId,
+        to: config.botPotterLineGroupId,
         messages: [
           {
             type: "text",
