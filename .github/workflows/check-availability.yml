@@ -2,8 +2,8 @@ name: Gym Availability Checker
 
 on:
   schedule: # (skip JST 01:00-05:59) other every 40 min
-    - cron: "*/60 21-23 * * *" # 21:00-23:59 UTC (06:00-08:59 JST)
-    - cron: "*/60 0-15 * * *" # 0:00-15:59 UTC (09:00-00:59 JST)
+    - cron: "*/40 21-23 * * *" # 21:00-23:59 UTC (06:00-08:59 JST)
+    - cron: "*/40 0-15 * * *" # 0:00-15:59 UTC (09:00-00:59 JST)
   workflow_dispatch: # Allow manual triggering
 
 jobs:
