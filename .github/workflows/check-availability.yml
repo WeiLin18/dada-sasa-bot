@@ -55,6 +55,7 @@ jobs:
           echo "TAI_PASSWORD=${{ secrets.TAI_PASSWORD }}" >> .env
           echo "TAI_USER_ID=${{ secrets.TAI_USER_ID }}" >> .env
           echo "RANGE_MINUTES=${{ secrets.RANGE_MINUTES || '15' }}" >> .env
+          echo "RANGE_MINUTES=${{ secrets.EXCLUDED_DATES || '2025/10/11' }}" >> .env
 
       - name: Run availability check
         run: pnpm test
