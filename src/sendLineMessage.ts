@@ -38,7 +38,7 @@ export async function sendLineFlexMessage(
     const dayOfMonth = currentDate.getDate();
 
     // 15號前使用 POKOBI，15號後使用 POTTER
-    const isFirstHalf = dayOfMonth <= 15;
+    const isFirstHalf = dayOfMonth <= 13;
     const accessToken = isFirstHalf
       ? config.botPokobiLineChannelAccessToken
       : config.botPotterLineChannelAccessToken;
