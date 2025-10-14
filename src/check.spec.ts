@@ -351,7 +351,9 @@ test("Check availability", async ({ browser }) => {
       const shouldNotify =
         isReportRoutineTime || hasPrimeTime || hasWeekendSlot;
 
-      console.log(`Current time in Japan: ${japanHour}:${japanMinute}`);
+      console.log(
+        `Current time in Japan: ${new Date().getHours()}:${new Date().getMinutes()}`
+      );
       console.log(`Is priority time: ${isReportRoutineTime}`);
       console.log(`Has prime time slots: ${hasPrimeTime}`);
       console.log(`Has weekend slots: ${hasWeekendSlot}`);
