@@ -19,7 +19,7 @@ export const config = {
   webhookPort: "3000",
   // Time-based notification settings
   priorityHours: [20], // Hours when notifications should always be sent
-  rangeMinutes: Number(process.env.RANGE_MINUTES || 10), // Minutes before and after priority hours to send notifications,
+  rangeMinutes: Number(process.env.RANGE_MINUTES || 15), // Minutes before and after priority hours to send notifications,
 
   // 要過濾掉的日期，格式為 "YYYY/MM/DD"
   excludedDates: process.env.EXCLUDED_DATES
@@ -33,9 +33,8 @@ export const isPriorityTime = (): boolean => {
   const japanHour = (now.getUTCHours() + 9) % 24;
   const japanMinute = now.getUTCMinutes();
 
-  // 只檢查 20:00 ±15 分鐘
+  // 只檢查 20:00 ~ 20:15
   return (
-    (japanHour === 20 && japanMinute <= config.rangeMinutes) ||
-    (japanHour === 19 && japanMinute >= 60 - config.rangeMinutes)
+    japanHour === 20 && japanMinute >= 0 && japanMinute <= config.rangeMinutes
   );
 };
