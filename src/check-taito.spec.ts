@@ -1,6 +1,6 @@
 import type { Page, Locator } from "@playwright/test";
 import { test } from "@playwright/test";
-import { config } from "../src/config";
+import { config, isPriorityTime } from "../src/config";
 import { sendLineFlexMessage } from "./sendLineMessage";
 import * as fs from "fs";
 import * as path from "path";
@@ -52,20 +52,6 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       .toString()
       .padStart(2, "0")}`
   );
-
-  const isPriorityTime = () => {
-    return config.priorityHours.some((hour) => {
-      // 如果當前小時就是優先小時，只在前15分鐘內執行
-      if (japanHour === hour) {
-        return japanMinute <= config.rangeMinutes;
-      }
-      // 如果是優先小時的前一小時，只在後15分鐘內執行
-      else if (japanHour === hour - 1 || (japanHour === 23 && hour === 0)) {
-        return japanMinute >= 60 - config.rangeMinutes;
-      }
-      return false;
-    });
-  };
 
   page = await browser.newPage();
   await page.goto("https://shisetsu.city.taito.lg.jp/");

@@ -26,3 +26,16 @@ export const config = {
     ? process.env.EXCLUDED_DATES.split(",")
     : ["2025/10/11"],
 };
+
+// 檢查是否在優先時間內（只針對 20:00）
+export const isPriorityTime = (): boolean => {
+  const now = new Date();
+  const japanHour = (now.getUTCHours() + 9) % 24;
+  const japanMinute = now.getUTCMinutes();
+
+  // 只檢查 20:00 ±15 分鐘
+  return (
+    (japanHour === 20 && japanMinute <= config.rangeMinutes) ||
+    (japanHour === 19 && japanMinute >= 60 - config.rangeMinutes)
+  );
+};

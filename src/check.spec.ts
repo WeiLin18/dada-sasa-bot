@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { config } from "../src/config";
+import { config, isPriorityTime } from "../src/config";
 
 let page: Page;
 
@@ -290,23 +290,8 @@ test("Check availability", async ({ browser }) => {
   await page.getByRole("link", { name: "戻る" }).click();
   await page.waitForLoadState("domcontentloaded");
 
-  // Get current time in Japan (JST = UTC+9)
-  const now = new Date();
-  const japanHour = (now.getUTCHours() + 9) % 24;
-  const japanMinute = now.getUTCMinutes();
-
-  // Check if it's a priority hour (8:00, 12:00, 20:00, 24:00) within ±15 minutes
-  const isReportRoutineTime = config.priorityHours.some((hour) => {
-    // Calculate if we're before or after the priority hour
-    if (japanHour === hour) {
-      // Within the priority hour itself, we want the first 15 minutes
-      return japanMinute <= config.rangeMinutes;
-    } else if (japanHour === hour - 1 || (japanHour === 23 && hour === 0)) {
-      // Hour before the priority hour, we want the last 15 minutes
-      return japanMinute >= 60 - config.rangeMinutes;
-    }
-    return false;
-  });
+  // Check if it's priority time (20:00 ±15 minutes)
+  const isReportRoutineTime = isPriorityTime();
 
   // only check 夜間アリーナ if it's a priority time
   if (isReportRoutineTime) {
