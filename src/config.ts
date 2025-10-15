@@ -24,7 +24,7 @@ export const config = {
   // 要過濾掉的日期，格式為 "YYYY/MM/DD"
   excludedDates: process.env.EXCLUDED_DATES
     ? process.env.EXCLUDED_DATES.split(",")
-    : ["2025/10/11"],
+    : ["2025/10/30"],
 };
 
 // 檢查是否在優先時間內（只針對 20:00）
