@@ -116,8 +116,9 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
 
       const monthInput = page.locator("#txtMonth");
       const month = new Date().getMonth() + 1;
-      await monthInput.fill((month + 2).toString());
-      console.log("已填寫月份", month + 2);
+      const targetMonth = ((month + 2 - 1) % 12) + 1;
+      await monthInput.fill(targetMonth.toString());
+      console.log("已填寫月份", targetMonth);
       await page.getByRole("button", { name: "1ヶ月" }).click();
       await page.getByRole("button", { name: "夜間" }).click();
       await page.getByRole("button", { name: "横表示" }).click();
