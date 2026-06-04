@@ -15,6 +15,9 @@ export const config = {
   // tai
   taiUserId: process.env.TAI_USER_ID,
   taiPassword: process.env.TAI_PASSWORD,
+  // shibuya
+  shibuyaId: process.env.SHIBUYA_ID,
+  shibuyaPassword: process.env.SHIBUYA_PASSWORD,
 
   webhookPort: "3000",
   // Time-based notification settings
