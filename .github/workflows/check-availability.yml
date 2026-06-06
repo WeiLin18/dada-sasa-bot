@@ -52,8 +52,10 @@ jobs:
           echo "BOT_POKOBI_LINE_GROUP_ID=${{ secrets.BOT_POKOBI_LINE_GROUP_ID }}" >> .env
           echo "PASSWORD=${{ secrets.PASSWORD }}" >> .env
           echo "USER_ID=${{ secrets.USER_ID }}" >> .env
-          echo "TAI_PASSWORD=${{ secrets.TAI_PASSWORD }}" >> .env
           echo "TAI_USER_ID=${{ secrets.TAI_USER_ID }}" >> .env
+          echo "TAI_PASSWORD=${{ secrets.TAI_PASSWORD }}" >> .env
+          echo "SHIBUYA_ID=${{ secrets.SHIBUYA_ID }}" >> .env
+          echo "SHIBUYA_PASSWORD=${{ secrets.SHIBUYA_PASSWORD }}" >> .env
           echo "RANGE_MINUTES=${{ secrets.RANGE_MINUTES || '15' }}" >> .env
           echo "EXCLUDED_DATES=${{ secrets.EXCLUDED_DATES || '2025/10/30,2025/11/01,2025/11/02' }}" >> .env
 
