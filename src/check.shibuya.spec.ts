@@ -45,6 +45,7 @@ test("Check shibuya availability", async ({ browser }) => {
           .filter({ hasText: area });
         await listItem
           .locator(".list_item-jump", { hasText: "移動する" })
+          .first()
           .click();
         await page.waitForLoadState("domcontentloaded");
 
