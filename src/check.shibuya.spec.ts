@@ -96,21 +96,16 @@ test("Check shibuya availability", async ({ browser }) => {
             await page.waitForLoadState("domcontentloaded");
             await page.waitForTimeout(10000);
             // Find all TDs containing "予約申込可" and get their dates
+            // 找到所有可預約的日期（帶有 span.vacant 的 td）
             const availableDates = await page
               .locator("td:has(span.vacant)")
               .evaluateAll((tds) => tds.map((td) => td.id));
 
-            // 過濾掉排除日期
-            // 日期格式假設為 YYYYMMDD，需要轉換為 YYYY/MM/DD 來比對
+            // 過濾掉排除日期（td.id 格式已經是 YYYY/MM/DD）
             const filteredDates = availableDates.filter((dateId) => {
-              // 嘗試從 ID 中提取日期（假設格式為 YYYYMMDD 或類似格式）
-              const dateMatch = dateId.match(/(\d{4})(\d{2})(\d{2})/);
-              if (dateMatch) {
-                const formattedDate = `${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}`;
-                if (config.excludedDates.includes(formattedDate)) {
-                  console.log(`跳過排除日期: ${formattedDate}`);
-                  return false;
-                }
+              if (config.excludedDates.includes(dateId)) {
+                console.log(`跳過排除日期: ${dateId}`);
+                return false;
               }
               return true;
             });
