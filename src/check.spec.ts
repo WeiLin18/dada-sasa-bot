@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { config, isPriorityTime } from "../src/config";
+import { config, isPriorityTime, getAllExcludedDates } from "../src/config";
 
 let page: Page;
 
@@ -128,13 +128,15 @@ test("Check availability", async ({ browser }) => {
             }
 
             // 检查日期是否在排除清单中
+            // 包含靜態排除日期 + 動態近期日期（從今天算起5天內）
             const formattedDate = dateStr
               ? `${dateStr.slice(0, 4)}/${dateStr.slice(4, 6)}/${dateStr.slice(
                   6,
                   8
                 )}`
               : "";
-            if (formattedDate && config.excludedDates.includes(formattedDate)) {
+            const excludedDates = getAllExcludedDates();
+            if (formattedDate && excludedDates.includes(formattedDate)) {
               console.log(`跳過排除日期: ${formattedDate}`);
               continue;
             }

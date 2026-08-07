@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { config, isPriorityTime } from "../src/config";
+import { config, isPriorityTime, getAllExcludedDates } from "../src/config";
 
 let page: Page;
 
@@ -102,8 +102,10 @@ test("Check shibuya availability", async ({ browser }) => {
               .evaluateAll((tds) => tds.map((td) => td.id));
 
             // 過濾掉排除日期（td.id 格式已經是 YYYY/MM/DD）
+            // 包含靜態排除日期 + 動態近期日期（從今天算起5天內）
+            const excludedDates = getAllExcludedDates();
             const filteredDates = availableDates.filter((dateId) => {
-              if (config.excludedDates.includes(dateId)) {
+              if (excludedDates.includes(dateId)) {
                 console.log(`跳過排除日期: ${dateId}`);
                 return false;
               }

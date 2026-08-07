@@ -28,6 +28,39 @@ export const config = {
   excludedDates: process.env.EXCLUDED_DATES
     ? process.env.EXCLUDED_DATES.split(",")
     : ["2025/12/26", "2026/01/03"],
+
+  // 要排除的近期天數（從今天算起）
+  excludeRecentDays: 5,
+};
+
+// 取得從今天算起 N 天內的日期列表（使用日本時區）
+export const getRecentDatesToExclude = (): string[] => {
+  const dates: string[] = [];
+  const now = new Date();
+
+  // 轉換為日本時間
+  const japanOffset = 9 * 60; // UTC+9
+  const japanTime = new Date(now.getTime() + japanOffset * 60 * 1000);
+
+  for (let i = 0; i < config.excludeRecentDays; i++) {
+    const date = new Date(japanTime);
+    date.setDate(date.getDate() + i);
+
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+
+    dates.push(`${year}/${month}/${day}`);
+  }
+
+  return dates;
+};
+
+// 取得所有要排除的日期（靜態 + 動態近期日期）
+export const getAllExcludedDates = (): string[] => {
+  const recentDates = getRecentDatesToExclude();
+  const allExcluded = [...new Set([...config.excludedDates, ...recentDates])];
+  return allExcluded;
 };
 
 // 檢查是否在優先時間內（只針對 20:00）

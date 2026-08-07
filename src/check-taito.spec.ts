@@ -1,6 +1,6 @@
 import type { Page, Locator } from "@playwright/test";
 import { test } from "@playwright/test";
-import { config, isPriorityTime } from "../src/config";
+import { isPriorityTime, getAllExcludedDates } from "../src/config";
 import { sendLineFlexMessage } from "./sendLineMessage";
 import * as fs from "fs";
 import * as path from "path";
@@ -254,9 +254,11 @@ async function getAvailableSlots(): Promise<string[]> {
         }
 
         // 處理找到的可用時段
+        // 包含靜態排除日期 + 動態近期日期（從今天算起5天內）
+        const excludedDates = getAllExcludedDates();
         for (const marker of availableMarkers) {
           // 檢查日期是否在排除清單中
-          if (config.excludedDates.includes(marker.date)) {
+          if (excludedDates.includes(marker.date)) {
             console.log(`跳過排除日期: ${marker.date}`);
             continue;
           }
