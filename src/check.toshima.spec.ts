@@ -23,8 +23,11 @@ const CONTINUOUS_MIN_MINUTES = 180;
 // 平日只看跨過 18:00 之後的時段（週末則全天都看）
 const WEEKDAY_EVENING_FROM = 18 * 60;
 
-// 要掃幾個「1ヶ月」區間（從今天開始，每個區間約 30 天）
-const PERIODS_TO_CHECK = 2;
+// 一次掃一個「1ヶ月」區間，往後推到申込期間結束為止。
+// 豊島區目前只開放到「次月底」（例：8/15 當下只到 9/30），超出的日期會顯示「－」且沒有 checkbox，
+// 所以掃到某個區間完全沒有可申請的格子時就提前結束，不用白跑。
+// MAX_PERIODS 只是上限，開放期間變長時會自動掃得更遠。
+const MAX_PERIODS = 4;
 const PERIOD_DAYS = 30;
 
 // 單一時段（例：9:00～12:00）
@@ -106,7 +109,9 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
   const allRows: RowAvailability[] = [];
 
   // 步驟 3：一個區間一個區間掃（施設別空き状況 → 時間帯別空き状況 → 返回）
-  for (let period = 0; period < PERIODS_TO_CHECK; period++) {
+  let reachedEndOfWindow = false;
+
+  for (let period = 0; period < MAX_PERIODS && !reachedEndOfWindow; period++) {
     await test.step(`掃描第 ${period + 1} 個區間`, async () => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() + period * PERIOD_DAYS);
@@ -123,27 +128,41 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
 
       // 找出所有有空（○ / △）的日期，並排除近期與指定排除日
       const excludedDates = getAllExcludedDates();
-      const candidateIds = await page.evaluate(() => {
-        const ids: { id: string; date: string }[] = [];
+      const { bookableCells, candidates } = await page.evaluate(() => {
+        const found: { id: string; date: string }[] = [];
+        let bookable = 0;
+
         document
           .querySelectorAll("table.calendar.horizon tbody td")
           .forEach((td) => {
-            const mark = (td.textContent || "").trim();
             const input = td.querySelector(
               "input[name=checkdate]"
             ) as HTMLInputElement | null;
-            if (!input || (mark !== "○" && mark !== "△")) return;
+            // 申込期間外（－）與休館日沒有 checkbox，用這個判斷是否還在開放期間內
+            if (!input) return;
+            bookable += 1;
+
+            const mark = (td.textContent || "").trim();
+            if (mark !== "○" && mark !== "△") return;
             // value 格式：20260824 + 場地代碼，前 8 碼為日期
             const raw = input.value.slice(0, 8);
-            ids.push({
+            found.push({
               id: input.id,
               date: `${raw.slice(0, 4)}/${raw.slice(4, 6)}/${raw.slice(6, 8)}`,
             });
           });
-        return ids;
+
+        return { bookableCells: bookable, candidates: found };
       });
 
-      const targets = candidateIds.filter(({ date }) => {
+      // 整個區間都在申込期間外，代表已經掃到開放期間的尾巴了
+      if (bookableCells === 0) {
+        console.log(`[區間 ${period + 1}] 已超出申込期間，結束掃描`);
+        reachedEndOfWindow = true;
+        return;
+      }
+
+      const targets = candidates.filter(({ date }) => {
         if (excludedDates.includes(date)) {
           console.log(`跳過排除日期: ${date}`);
           return false;
