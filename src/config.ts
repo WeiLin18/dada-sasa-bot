@@ -30,7 +30,7 @@ export const config = {
     : ["2025/12/26", "2026/01/03"],
 
   // 要排除的近期天數（從今天算起）
-  excludeRecentDays: 5,
+  excludeRecentDays: 7,
 };
 
 // 取得從今天算起 N 天內的日期列表（使用日本時區）
