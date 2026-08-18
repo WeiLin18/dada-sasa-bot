@@ -26,13 +26,27 @@ interface SlotsByDateMap {
   [key: string]: SlotInfo[];
 }
 
-// 定義需要選擇的設施類型
+// 定義需要選擇的設施類型（夜間巡邏用）
 const facilityTypes = [
   // "第１競技場（全面）",
   // "第１競技場（半面Ａ）",
   // "第１競技場（半面Ｂ）",
   "第２競技場",
 ];
+
+// 週末（土日）全天巡邏的場地，只要全面。
+// 第２競技場沒有半面的細分，本身就是整面。
+// 半面Ａ／Ｂ 不列入；武道場／弓道場／相撲場／会議室 不是羽球場，也不列入。
+const weekendFacilityTypes = ["第１競技場（全面）", "第２競技場"];
+
+// 週末巡邏從幾個月後開始找。0 = 從當月開始，近期的週末也會掃到。
+// 用相對月數而不是寫死月份，否則排程跑久了會變成去查已經過去的月份。
+const WEEKEND_START_MONTH_OFFSET = 0;
+
+// 從起始月往後最多看幾個月。
+// 台東目前開放到約 4 個月後（例：2026/08 當下可看到 2026/12，2027/01 起全是「－」），
+// 掃到某個月完全沒有可申請的格子就提前結束，不用白跑。
+const WEEKEND_MAX_MONTHS = 6;
 
 // 在測試最開始增加錯誤收集功能
 test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
@@ -114,11 +128,17 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       await page.waitForLoadState("domcontentloaded");
       await page.waitForTimeout(1000);
 
-      const monthInput = page.locator("#txtMonth");
-      const month = new Date().getMonth() + 1;
-      const targetMonth = ((month + 2 - 1) % 12) + 1;
-      await monthInput.fill(targetMonth.toString());
-      console.log("已填寫月份", targetMonth);
+      // 年份也要一起填。原本只填月份，跨年時（11 月往後兩個月 = 1 月）
+      // 會變成查「今年 1 月」這個已經過去的月份，而不是明年 1 月。
+      // 先把日設成 1 再加月，避免月底日期造成的溢位（例如 1/31 + 1 個月 = 3/3）。
+      const twoMonthsLater = new Date();
+      twoMonthsLater.setDate(1);
+      twoMonthsLater.setMonth(twoMonthsLater.getMonth() + 2);
+      const targetYear = twoMonthsLater.getFullYear();
+      const targetMonth = twoMonthsLater.getMonth() + 1;
+      await page.locator("#txtYear").fill(String(targetYear));
+      await page.locator("#txtMonth").fill(String(targetMonth));
+      console.log("已填寫年月", targetYear, targetMonth);
       await page.getByRole("button", { name: "1ヶ月" }).click();
       await page.getByRole("button", { name: "夜間" }).click();
       await page.getByRole("button", { name: "横表示" }).click();
@@ -134,16 +154,38 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
     });
   });
 
+  // 週末（土日）全天巡邏，往後掃到申込期間結束為止
+  let weekendSlots: string[] = [];
+
+  await test.step("搜尋週末全天可用性", async () => {
+    console.log("正在尋找週末（土日）全天有○或△的位置...");
+    weekendSlots = await getWeekendSlots();
+    console.log(`台東 - 週末找到 ${weekendSlots.length} 個可用位置`);
+  });
+
   await test.step("發送通知", async () => {
-    // 如果找到晚上時段，報告這些位置
-    if (eveningSlots.length > 0 || twoMonthEveningSlots.length > 0) {
-      console.log(`台東 - 找到 ${eveningSlots.length} 個晚上時段可用位置`);
+    const nightSlots = [...eveningSlots, ...twoMonthEveningSlots];
+
+    // 晚上或週末任一有找到就通知
+    if (nightSlots.length > 0 || weekendSlots.length > 0) {
+      console.log(
+        `台東 - 晚上 ${nightSlots.length} 筆、週末 ${weekendSlots.length} 筆`
+      );
 
       console.log("台東 - 依日期顯示可用位置：");
 
       // 準備要發送的訊息內容
-      const title = `🏸 台東時段釋出🔥`;
-      const contents = [...eveningSlots, ...twoMonthEveningSlots];
+      const title =
+        nightSlots.length > 0 && weekendSlots.length > 0
+          ? `🏸 台東晚上 & 週末時段釋出🔥`
+          : weekendSlots.length > 0
+          ? `🏸 台東週末時段釋出🔥`
+          : `🏸 台東時段釋出🔥`;
+      const contents = [
+        ...nightSlots,
+        ...(weekendSlots.length > 0 && nightSlots.length > 0 ? [" "] : []),
+        ...weekendSlots,
+      ];
 
       // 發送摘要通知
       const buttonUrl = "https://shisetsu.city.taito.lg.jp/";
@@ -161,10 +203,10 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       );
     } else {
       if (!isPriorityTime()) return;
-      console.log("台東 - 未找到晚上時段可用位置");
+      console.log("台東 - 未找到晚上或週末可用位置");
       // 發送無可用位置的通知
       const title = `🏸 台東施設情報`;
-      const contents = ["目前沒有晚上時段可用位置"];
+      const contents = ["目前沒有晚上或週末可用位置"];
       const buttonUrl = "https://shisetsu.city.taito.lg.jp/";
       const buttonLabel = "予約サイトへ";
 
@@ -289,4 +331,153 @@ async function getAvailableSlots(): Promise<string[]> {
     }
   }
   return date;
+}
+
+/**
+ * 週末（土日）全天巡邏。
+ * 一個月一個月往後看，每個月都重新走一次「日時選択」設定：
+ * 年月 → 1ヶ月 → 全日 → 土 → 日 → 横表示 → 次へ。
+ * 曜日篩選交給網站處理，回來的表格就只剩土日的欄位，不必自己算週末。
+ */
+async function getWeekendSlots(): Promise<string[]> {
+  const found: string[] = [];
+  const excludedDates = getAllExcludedDates();
+  const now = new Date();
+
+  for (let offset = 0; offset < WEEKEND_MAX_MONTHS; offset++) {
+    const target = new Date(
+      now.getFullYear(),
+      now.getMonth() + WEEKEND_START_MONTH_OFFSET + offset,
+      1
+    );
+    const year = target.getFullYear();
+    const month = target.getMonth() + 1;
+
+    await navigateToWeekendCalendar(year, month);
+
+    const table = page.locator("table#dlRepeat_ctl00_tpItem_dgTable");
+
+    // 判斷這個月是否還在申込期間內。超出期間的月份整張表只會有「－」或「休館日」，
+    // 完全不會出現 ○ / △ / ×，用這個當結束條件。
+    const inWindow = await table.evaluate((el) =>
+      [...el.querySelectorAll("td")].some((td) => {
+        const mark = (td.textContent || "").trim();
+        return mark === "○" || mark === "△" || mark === "×";
+      })
+    );
+    if (!inWindow) {
+      console.log(`台東 - ${year}/${month} 已超出申込期間，結束週末巡邏`);
+      break;
+    }
+
+    const rows = await table.evaluate((el, wanted) => {
+      const result: { name: string; marks: { date: string; mark: string }[] }[] =
+        [];
+
+      [...el.querySelectorAll("tr")].forEach((tr) => {
+        const cells = [...tr.querySelectorAll("td")];
+        const name = (cells[0]?.textContent || "").trim();
+        if (!wanted.includes(name)) return;
+
+        // cells[0] 是場地名、cells[1] 是定員，之後才是各日期的格子
+        const marks = cells
+          .slice(2)
+          .map((td) => {
+            const mark = (td.textContent || "").trim();
+            // 日期只能從連結的 href 取（格式如 b20261205），表頭只有「5土」這種文字
+            const matched = td
+              .querySelector("a")
+              ?.getAttribute("href")
+              ?.match(/b(\d{8})/);
+            if (!matched) return null;
+            const raw = matched[1];
+            return {
+              date: `${raw.slice(0, 4)}/${raw.slice(4, 6)}/${raw.slice(6, 8)}`,
+              mark,
+            };
+          })
+          .filter((cell): cell is { date: string; mark: string } => !!cell);
+
+        result.push({ name, marks });
+      });
+
+      return result;
+    }, weekendFacilityTypes);
+
+    // 場地名稱是用完全比對抓的，網站改名的話會整列被靜默跳過，
+    // 看起來就像「全滿沒空位」。這裡明確警告，避免無聲失效。
+    const foundNames = rows.map((row) => row.name);
+    const missingNames = weekendFacilityTypes.filter(
+      (name) => !foundNames.includes(name)
+    );
+    if (missingNames.length > 0) {
+      console.log(
+        `⚠️ [${year}/${month}] 表格中找不到這些場地，名稱可能已變更: ${missingNames.join(
+          ", "
+        )}`
+      );
+    }
+
+    let monthCount = 0;
+    for (const row of rows) {
+      for (const { date, mark } of row.marks) {
+        if (mark !== "○" && mark !== "△") continue;
+        if (excludedDates.includes(date)) {
+          console.log(`跳過排除日期: ${date}`);
+          continue;
+        }
+        const slotInfo = `${row.name} - ${date} - ${mark}（週末）`;
+        found.push(slotInfo);
+        monthCount += 1;
+        console.log(`找到週末可用時段: ${slotInfo}`);
+      }
+    }
+    console.log(`台東 - ${year}/${month} 週末找到 ${monthCount} 筆`);
+  }
+
+  return found;
+}
+
+/**
+ * 走一次「日時選択」，設定成指定年月的週末全天橫表示
+ */
+async function navigateToWeekendCalendar(
+  year: number,
+  month: number
+): Promise<void> {
+  await page.goto("https://shisetsu.city.taito.lg.jp/");
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(1000);
+  await page.getByRole("button", { name: "運動施設" }).click();
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(700);
+  await page
+    .getByRole("button", { name: "台東リバーサイドＳＣ体育館" })
+    .click();
+  await page.getByRole("button", { name: "次へ >>" }).click();
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(1000);
+
+  // 年份一定要一起填，不然跨年時（例如 12 月往後看 1 月）會查到今年的過去月份
+  await page.locator("#txtYear").fill(String(year));
+  await page.locator("#txtMonth").fill(String(month));
+  await page.locator("#txtDay").fill("1");
+
+  // 這些都是 submit 按鈕，每按一次就是一次 postback，要逐一等頁面回來
+  for (const selector of [
+    "#rbtnMonth", // 1ヶ月
+    "#rbtnAllday", // 全日
+    "#chkSat", // 土
+    "#chkSun", // 日
+    "#rbYoko", // 横表示
+  ]) {
+    await page.locator(selector).click();
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(700);
+  }
+
+  await page.getByRole("button", { name: "次へ >>" }).click();
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(2500);
+  console.log(`台東 - 已進入 ${year}/${month} 週末全天日曆`);
 }
