@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { getAllExcludedDates } from "../src/config";
+import { config, getAllExcludedDates } from "../src/config";
 
 let page: Page;
 
@@ -31,8 +31,11 @@ const SCHOOL_FACILITY_KEYWORD = "体育館";
 // 平日要能打到 20:00：時段必須「涵蓋」20:00（start <= 20:00 < end）
 const WEEKDAY_TARGET_MINUTES = 20 * 60;
 
-// 港區目前開放到約 3 個月後，用 1 個月為單位掃 3 輪
-const ROUNDS = 3;
+// 用 1 個月為單位往後掃。
+// 實測這個帳號的受付期間約是 today+5 ～ today+61（例：2026/08/18 當下是 08/23～10/18），
+// 兩輪（today ～ today+62）就完整覆蓋，第三輪必定全部是「受付期間外」。
+// 注意：未登入時網站會顯示更遠的日期，但那些是這個帳號訂不到的。
+const ROUNDS = 2;
 const ROUND_DAYS = 31;
 // 日付順 清單一次只給一頁，最多按這麼多次「さらに表示」
 const MAX_MORE_CLICKS = 30;
@@ -80,6 +83,26 @@ const weekdayOf = (date: string): string => {
   return WEEKDAY_LABELS[new Date(year, month - 1, day).getDay()];
 };
 
+// 確認目前仍是登入狀態。
+// 未登入時網站照樣會給結果，但那是「公開空況」，包含這個帳號根本申請不到的日期，
+// 所以 session 一掉就必須整個中止，不能默默拿錯的資料去發通知。
+const assertLoggedIn = async (where: string): Promise<void> => {
+  const logoutCount = await page.getByText("ログアウト", { exact: true }).count();
+  if (logoutCount === 0) {
+    throw new Error(
+      `session 已遺失（${where}，URL: ${page.url()}）。未登入的結果會包含訂不到的時段，中止`
+    );
+  }
+};
+
+// 回首頁一定要用站內連結。直接 page.goto() 打入口網址會讓網站發新的 session，
+// 登入狀態會被丟掉（而且畫面看起來一切正常，只是結果變成公開空況）。
+const goHome = async (): Promise<void> => {
+  await page.getByText("ホーム", { exact: true }).first().click();
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(2500);
+};
+
 // 只留下要掃的館 × 場地
 const isWantedFacility = (mansion: string, facility: string): boolean => {
   if (mansion === SPORTS_CENTER)
@@ -91,6 +114,53 @@ const isWantedFacility = (mansion: string, facility: string): boolean => {
 
 test("查詢港區設施的平日晚上與週末可用性", async ({ browser }) => {
   page = await browser.newPage();
+
+  // 必須登入。未登入時網站給的是公開空況，會包含這個帳號還不能申請的日期
+  // （受付期間是綁帳號的），登入後看到的才是實際訂得到的。
+  await test.step("登入", async () => {
+    if (!config.minatoId || !config.minatoPassword) {
+      throw new Error(
+        "缺少 MINATO_ID / MINATO_PASSWORD，未登入的查詢結果會包含訂不到的時段，中止"
+      );
+    }
+
+    await page.goto(MINATO_URL);
+    await page.waitForLoadState("domcontentloaded");
+    await page.locator("#btn-login").click();
+    await page.waitForLoadState("domcontentloaded");
+
+    await page.locator("#userId").fill(config.minatoId);
+    await page.locator("#password").fill(config.minatoPassword);
+    await page.locator("#btn-go").click();
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(2500);
+
+    // 用兩個獨立訊號判斷，只要其中一個成立就算登入成功：
+    //   1. 出現「ログアウト」。實測未登入時三個頁面的 HTML 都完全沒有這個字，
+    //      所以用 count 而不是 isVisible —— 版面可能有手機／桌機兩份，其中一份是隱藏的
+    //   2. 原本到處都在的登入按鈕不見了
+    const logoutCount = await page.getByText("ログアウト", { exact: true }).count();
+    const loginStillVisible = await page
+      .locator("#btn-login")
+      .isVisible()
+      .catch(() => false);
+
+    if (logoutCount === 0 && loginStillVisible) {
+      const notice = await page
+        .locator(".alert, .error, .errmsg")
+        .first()
+        .innerText()
+        .catch(() => "");
+      throw new Error(
+        `登入失敗，請確認 MINATO_ID / MINATO_PASSWORD（URL: ${page.url()}${
+          notice ? ` / 畫面訊息: ${notice.replace(/\s+/g, " ").slice(0, 120)}` : ""
+        }）`
+      );
+    }
+    console.log(
+      `港區 - 登入成功（ログアウト x${logoutCount}, 登入鈕仍可見=${loginStillVisible}）`
+    );
+  });
 
   const allRows: CollectedRow[] = [];
   const seen = new Set<string>();
@@ -106,7 +176,9 @@ test("查詢港區設施的平日晚上與週末可用性", async ({ browser }) 
         String(startDate.getDate()).padStart(2, "0"),
       ].join("-"); // YYYY-MM-DD
 
-      await test.step(`${mode.label} 第 ${round + 1} 輪（${startDateValue}）`, async () => {
+      await test.step(`${mode.label} 第 ${
+        round + 1
+      } 輪（${startDateValue}）`, async () => {
         const rows = await searchDailyList(mode, startDateValue);
         console.log(`[${mode.label} R${round + 1}] 取得 ${rows.length} 列`);
 
@@ -178,10 +250,10 @@ async function searchDailyList(
   mode: (typeof SEARCH_MODES)[number],
   startDateValue: string
 ): Promise<SlotRow[]> {
-  await page.goto(MINATO_URL);
-  await page.waitForLoadState("domcontentloaded");
+  await goHome();
+  await assertLoggedIn("搜尋前的首頁");
   await page.waitForSelector("#bname");
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(1200);
 
   // 「いつ」區塊預設是收起來的，收起時裡面的欄位點不到
   if (!(await page.locator("#days").isVisible())) {
@@ -218,10 +290,12 @@ async function searchDailyList(
   await page.locator("#btn-go").click();
   await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(3500);
+  await assertLoggedIn("空き状況 結果頁");
 
   await page.getByText("日付順", { exact: true }).first().click();
   await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(3000);
+  await assertLoggedIn("日付順 清單頁");
 
   // 一頁一頁展開，直到「さらに表示」消失
   let clicks = 0;
@@ -231,7 +305,12 @@ async function searchDailyList(
     await moreButton.click();
     await page.waitForTimeout(1500);
   }
-  if (await page.locator("#unreserved-moreBtn").isVisible().catch(() => false)) {
+  if (
+    await page
+      .locator("#unreserved-moreBtn")
+      .isVisible()
+      .catch(() => false)
+  ) {
     console.log(
       `⚠️ [${mode.label} ${startDateValue}] 按了 ${clicks} 次「さらに表示」仍有未載入的資料，結果可能不完整`
     );

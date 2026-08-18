@@ -18,6 +18,9 @@ export const config = {
   // shibuya
   shibuyaId: process.env.SHIBUYA_ID,
   shibuyaPassword: process.env.SHIBUYA_PASSWORD,
+  // minato
+  minatoId: process.env.MINATO_ID,
+  minatoPassword: process.env.MINATO_PASSWORD,
 
   webhookPort: "3000",
   // Time-based notification settings
