@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { getAllExcludedDates } from "../src/config";
+import { getAllExcludedDates, isToshimaReleaseWindow } from "../src/config";
 
 let page: Page;
 
@@ -74,6 +74,12 @@ const mergeContinuousSlots = (slots: Slot[]): Slot[] => {
 };
 
 test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) => {
+  // 釋出時段（每月 1 號與 21 號 JST 09:00～10:00）在 CI 上跳過
+  test.skip(
+    !!process.env.CI && isToshimaReleaseWindow(),
+    "豊島區釋出時段（每月 1 號與 21 號 JST 09:00～10:00），CI 跳過"
+  );
+
   page = await browser.newPage();
   await page.goto(TOSHIMA_URL);
   await page.waitForLoadState("domcontentloaded");
