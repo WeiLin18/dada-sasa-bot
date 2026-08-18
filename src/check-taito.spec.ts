@@ -43,7 +43,12 @@ const weekendFacilityTypes = [
   "第２競技場",
 ];
 
-// 週末巡邏最多往後看幾個月（含當月）。
+// 週末巡邏從幾個月後開始找。2 = 當月的兩個月後（例：8 月執行 → 從 10 月開始）。
+// 用相對月數而不是寫死「10 月」，否則排程跑到 11 月時會變成去查已經過去的月份。
+// 注意：這會跳過近期的週末，近期釋出的空位不會通知。
+const WEEKEND_START_MONTH_OFFSET = 2;
+
+// 從起始月往後最多看幾個月。
 // 台東目前開放到約 4 個月後（例：2026/08 當下可看到 2026/12，2027/01 起全是「－」），
 // 掃到某個月完全沒有可申請的格子就提前結束，不用白跑。
 const WEEKEND_MAX_MONTHS = 6;
@@ -345,7 +350,11 @@ async function getWeekendSlots(): Promise<string[]> {
   const now = new Date();
 
   for (let offset = 0; offset < WEEKEND_MAX_MONTHS; offset++) {
-    const target = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const target = new Date(
+      now.getFullYear(),
+      now.getMonth() + WEEKEND_START_MONTH_OFFSET + offset,
+      1
+    );
     const year = target.getFullYear();
     const month = target.getMonth() + 1;
 
