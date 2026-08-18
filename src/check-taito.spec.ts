@@ -34,19 +34,14 @@ const facilityTypes = [
   "第２競技場",
 ];
 
-// 週末（土日）全天巡邏的場地。
-// 週末通常有場就打，所以四個競技場都看；武道場／弓道場／相撲場／会議室 不是羽球場，不列入。
-const weekendFacilityTypes = [
-  "第１競技場（全面）",
-  "第１競技場（半面Ａ）",
-  "第１競技場（半面Ｂ）",
-  "第２競技場",
-];
+// 週末（土日）全天巡邏的場地，只要全面。
+// 第２競技場沒有半面的細分，本身就是整面。
+// 半面Ａ／Ｂ 不列入；武道場／弓道場／相撲場／会議室 不是羽球場，也不列入。
+const weekendFacilityTypes = ["第１競技場（全面）", "第２競技場"];
 
-// 週末巡邏從幾個月後開始找。2 = 當月的兩個月後（例：8 月執行 → 從 10 月開始）。
-// 用相對月數而不是寫死「10 月」，否則排程跑到 11 月時會變成去查已經過去的月份。
-// 注意：這會跳過近期的週末，近期釋出的空位不會通知。
-const WEEKEND_START_MONTH_OFFSET = 2;
+// 週末巡邏從幾個月後開始找。0 = 從當月開始，近期的週末也會掃到。
+// 用相對月數而不是寫死月份，否則排程跑久了會變成去查已經過去的月份。
+const WEEKEND_START_MONTH_OFFSET = 0;
 
 // 從起始月往後最多看幾個月。
 // 台東目前開放到約 4 個月後（例：2026/08 當下可看到 2026/12，2027/01 起全是「－」），
@@ -408,6 +403,20 @@ async function getWeekendSlots(): Promise<string[]> {
 
       return result;
     }, weekendFacilityTypes);
+
+    // 場地名稱是用完全比對抓的，網站改名的話會整列被靜默跳過，
+    // 看起來就像「全滿沒空位」。這裡明確警告，避免無聲失效。
+    const foundNames = rows.map((row) => row.name);
+    const missingNames = weekendFacilityTypes.filter(
+      (name) => !foundNames.includes(name)
+    );
+    if (missingNames.length > 0) {
+      console.log(
+        `⚠️ [${year}/${month}] 表格中找不到這些場地，名稱可能已變更: ${missingNames.join(
+          ", "
+        )}`
+      );
+    }
 
     let monthCount = 0;
     for (const row of rows) {
