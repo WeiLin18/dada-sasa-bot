@@ -74,3 +74,15 @@ export const isPriorityTime = (): boolean => {
     japanHour === 20 && japanMinute >= 0 && japanMinute <= config.rangeMinutes
   );
 };
+
+// 豊島區每月 1 號與 21 號的日本時間 09:00～09:59 是場地釋出時段，
+// 這段時間網站會很擁擠，CI 上不要去掃（本機手動執行不受影響）。
+// 接受 now 參數是為了可以測邊界，正常呼叫不用傳。
+export const isToshimaReleaseWindow = (now: Date = new Date()): boolean => {
+  // 先位移成日本時間再讀 UTC 欄位，跟 getRecentDatesToExclude 同一個做法
+  const japanTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const japanDay = japanTime.getUTCDate();
+  const japanHour = japanTime.getUTCHours();
+
+  return (japanDay === 1 || japanDay === 21) && japanHour === 9;
+};
