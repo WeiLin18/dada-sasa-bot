@@ -1,10 +1,10 @@
-# Sumida Gym Availability Checker
+# Tokyo Gym Availability Checker
 
-A project that automatically checks the Sumida City Gymnasium reservation system and sends Line notifications when slots become available.
+A project that automatically checks Tokyo ward gymnasium reservation systems (Sumida, Taito, Shibuya, Minato, and Toshima) and sends Line notifications when slots become available.
 
 ## Features
 
-- Uses Playwright to automate browser checks on the Sumida City Gymnasium website
+- Uses Playwright to automate browser checks on each ward's gymnasium reservation website
 - Detects "triangle (△)" or "circle (○)" symbols on the page, indicating available reservation slots
 - Sends notifications through Line Messaging API when availability is found
 - Can be automated to run periodically via GitHub Actions
