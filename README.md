@@ -75,7 +75,7 @@ Website structure analysis:
 
 ### Customizing Check Logic
 
-To modify the checking logic, edit the `src/check.spec.ts` file.
+To modify the checking logic, edit the `src/check.sumida.spec.ts` file.
 
 ## License
 
