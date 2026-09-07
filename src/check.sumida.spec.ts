@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { config, isPriorityTime, getAllExcludedDates } from "../src/config";
+import { config, getAllExcludedDates } from "../src/config";
 
 let page: Page;
 
@@ -292,71 +292,66 @@ test("Check availability", async ({ browser }) => {
   await page.getByRole("link", { name: "戻る" }).click();
   await page.waitForLoadState("domcontentloaded");
 
-  // Check if it's priority time (20:00 ±15 minutes)
-  const isReportRoutineTime = isPriorityTime();
+  await test.step("check 夜間アリーナ area", async () => {
+    await page.getByRole("link", { name: "夜間アリーナ" }).click();
+    await page.waitForLoadState("domcontentloaded");
 
-  // only check 夜間アリーナ if it's a priority time
-  if (isReportRoutineTime) {
-    await test.step("check 夜間アリーナ area", async () => {
-      await page.getByRole("link", { name: "夜間アリーナ" }).click();
-      await page.waitForLoadState("domcontentloaded");
+    await test.step("Check 夜間アリーナ first page", async () => {
+      // Check availability for all main areas
+      for (const area of nightAreaList) {
+        await test.step(`Select area: ${area}`, async () => {
+          console.log(`Checking availability for: ${area}`);
+          await page.getByRole("link", { name: area }).click();
+          await page.waitForLoadState("domcontentloaded");
 
-      await test.step("Check 夜間アリーナ first page", async () => {
-        // Check availability for all main areas
-        for (const area of nightAreaList) {
-          await test.step(`Select area: ${area}`, async () => {
-            console.log(`Checking availability for: ${area}`);
-            await page.getByRole("link", { name: area }).click();
-            await page.waitForLoadState("domcontentloaded");
+          await checkAreaTime(area, "night");
 
-            await checkAreaTime(area, "night");
-
-            // Go back to the area selection page
-            await page.getByRole("link", { name: "戻る" }).click();
-            await page.waitForLoadState("domcontentloaded");
-          });
-        }
-      });
-
-      // Move to next list for sub-arenas
-      await test.step("Go to next list of areas", async () => {
-        await page.getByRole("link", { name: "次の一覧" }).click();
-        await page.waitForLoadState("domcontentloaded");
-      });
-
-      await test.step("Check 夜間アリーナ second page", async () => {
-        // Check availability for all sub-arena areas
-        for (const area of nightNextAreaList) {
-          await test.step(`Select area: ${area}`, async () => {
-            console.log(`Checking availability for: ${area}`);
-            await page.getByRole("link", { name: area }).click();
-            await page.waitForLoadState("domcontentloaded");
-
-            await checkAreaTime(area, "night");
-
-            // Go back to the area selection page
-            await page.getByRole("link", { name: "戻る" }).click();
-            await page.waitForLoadState("domcontentloaded");
-
-            await page.getByRole("link", { name: "次の一覧" }).click();
-            await page.waitForLoadState("domcontentloaded");
-          });
-        }
-      });
+          // Go back to the area selection page
+          await page.getByRole("link", { name: "戻る" }).click();
+          await page.waitForLoadState("domcontentloaded");
+        });
+      }
     });
-  }
+
+    // Move to next list for sub-arenas
+    await test.step("Go to next list of areas", async () => {
+      await page.getByRole("link", { name: "次の一覧" }).click();
+      await page.waitForLoadState("domcontentloaded");
+    });
+
+    await test.step("Check 夜間アリーナ second page", async () => {
+      // Check availability for all sub-arena areas
+      for (const area of nightNextAreaList) {
+        await test.step(`Select area: ${area}`, async () => {
+          console.log(`Checking availability for: ${area}`);
+          await page.getByRole("link", { name: area }).click();
+          await page.waitForLoadState("domcontentloaded");
+
+          await checkAreaTime(area, "night");
+
+          // Go back to the area selection page
+          await page.getByRole("link", { name: "戻る" }).click();
+          await page.waitForLoadState("domcontentloaded");
+
+          await page.getByRole("link", { name: "次の一覧" }).click();
+          await page.waitForLoadState("domcontentloaded");
+        });
+      }
+    });
+  });
 
   // Send LINE notification if any availability was found
   if (availabilityInfo.length > 0) {
     await test.step("Check notification timing", async () => {
       // Determine if we should send a notification
-      const shouldNotify =
-        isReportRoutineTime || hasPrimeTime || hasWeekendSlot;
+      const shouldNotify = hasPrimeTime || hasWeekendSlot;
 
+      const now = new Date();
+      const japanHour = (now.getUTCHours() + 9) % 24;
+      const japanMinute = now.getUTCMinutes();
       console.log(
-        `Current time in Japan: ${new Date().getHours()}:${new Date().getMinutes()}`
+        `Current time in Japan: ${japanHour}:${japanMinute.toString().padStart(2, "0")}`
       );
-      console.log(`Is priority time: ${isReportRoutineTime}`);
       console.log(`Has prime time slots: ${hasPrimeTime}`);
       console.log(`Has weekend slots: ${hasWeekendSlot}`);
       console.log(`Should send notification: ${shouldNotify}`);
