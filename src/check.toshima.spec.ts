@@ -1,7 +1,11 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { getAllExcludedDates, isToshimaReleaseWindow } from "../src/config";
+import {
+  getAllExcludedDates,
+  isNightBlackout,
+  isToshimaReleaseWindow,
+} from "../src/config";
 
 let page: Page;
 
@@ -79,6 +83,8 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
     !!process.env.CI && isToshimaReleaseWindow(),
     "豊島區釋出時段（每月 1 號與 21 號 JST 09:00～10:00），CI 跳過"
   );
+
+  test.skip(isNightBlackout(), "日本時間 01:00-05:59 夜間黑名單時段，跳過測試");
 
   page = await browser.newPage();
   await page.goto(TOSHIMA_URL);

@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { config, getAllExcludedDates } from "../src/config";
+import { config, isNightBlackout, getAllExcludedDates } from "../src/config";
 
 let page: Page;
 
@@ -36,6 +36,8 @@ const sportAreaList = [
 const sportNextAreaList = ["サブアリーナ １／２面①", "サブアリーナ １／２面②"];
 
 test("Check availability", async ({ browser }) => {
+  test.skip(isNightBlackout(), "日本時間 01:00-05:59 夜間黑名單時段，跳過測試");
+
   page = await browser.newPage();
   await page.goto("https://yoyaku.sumidacity-gym.com/index.php");
   await page.waitForLoadState("domcontentloaded");

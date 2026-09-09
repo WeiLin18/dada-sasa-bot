@@ -1,6 +1,6 @@
 import type { Page, Locator } from "@playwright/test";
 import { test } from "@playwright/test";
-import { isPriorityTime, getAllExcludedDates } from "../src/config";
+import { isPriorityTime, isNightBlackout, getAllExcludedDates } from "../src/config";
 import { sendLineFlexMessage } from "./sendLineMessage";
 import * as fs from "fs";
 import * as path from "path";
@@ -50,6 +50,8 @@ const WEEKEND_MAX_MONTHS = 6;
 
 // 在測試最開始增加錯誤收集功能
 test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
+  test.skip(isNightBlackout(), "日本時間 01:00-05:59 夜間黑名單時段，跳過測試");
+
   // 確保截圖目錄存在
   const screenshotDir = path.join(process.cwd(), "e2e-result");
   if (!fs.existsSync(screenshotDir)) {

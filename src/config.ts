@@ -78,6 +78,15 @@ export const isPriorityTime = (): boolean => {
   );
 };
 
+// CI 排程本身刻意跳過日本時間 01:00～05:59（見 .github/workflows/check-availability.yml 的
+// cron 設定），但 GitHub Actions 的排程觸發是 best-effort，高負載時可能延遲數小時，
+// 導致原本該跳過的 run 實際落在這段時間才執行、誤發半夜通知。
+// 這裡在程式碼層再擋一次，不管 CI 幾點被觸發，只要當下日本時間落在黑名單時段就整支測試跳過。
+export const isNightBlackout = (now: Date = new Date()): boolean => {
+  const japanHour = (now.getUTCHours() + 9) % 24;
+  return japanHour >= 1 && japanHour <= 5;
+};
+
 // 豊島區每月 1 號與 21 號的日本時間 09:00～09:59 是場地釋出時段，
 // 這段時間網站會很擁擠，CI 上不要去掃（本機手動執行不受影響）。
 // 接受 now 參數是為了可以測邊界，正常呼叫不用傳。

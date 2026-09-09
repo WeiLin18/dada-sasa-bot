@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { config, isPriorityTime, getAllExcludedDates } from "../src/config";
+import { config, isNightBlackout, getAllExcludedDates } from "../src/config";
 
 let page: Page;
 
@@ -14,6 +14,8 @@ const favoriteAreas = [
 const targetHour = "17";
 
 test("Check shibuya availability", async ({ browser }) => {
+  test.skip(isNightBlackout(), "日本時間 01:00-05:59 夜間黑名單時段，跳過測試");
+
   page = await browser.newPage();
   await page.goto("https://yoyaku.city.shibuya.tokyo.jp/favorite");
   await page.waitForLoadState("domcontentloaded");

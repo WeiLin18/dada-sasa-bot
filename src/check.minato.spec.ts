@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
-import { config, getAllExcludedDates } from "../src/config";
+import { config, isNightBlackout, getAllExcludedDates } from "../src/config";
 
 let page: Page;
 
@@ -113,6 +113,8 @@ const isWantedFacility = (mansion: string, facility: string): boolean => {
 };
 
 test("查詢港區設施的平日晚上與週末可用性", async ({ browser }) => {
+  test.skip(isNightBlackout(), "日本時間 01:00-05:59 夜間黑名單時段，跳過測試");
+
   page = await browser.newPage();
 
   // 必須登入。未登入時網站給的是公開空況，會包含這個帳號還不能申請的日期
