@@ -35,20 +35,6 @@ const sportAreaList = [
 ];
 const sportNextAreaList = ["サブアリーナ １／２面①", "サブアリーナ １／２面②"];
 
-const nightAreaList = [
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）①",
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）②",
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／３面）③",
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）①",
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）②",
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）③",
-  "メインアリーナ夜間（２１時～２２時３０分） コート（１／４面）④",
-];
-const nightNextAreaList = [
-  "サブアリーナ夜間（２１時～２２時３０分） １／２面①",
-  "サブアリーナ夜間（２１時～２２時３０分） １／２面②",
-];
-
 test("Check availability", async ({ browser }) => {
   page = await browser.newPage();
   await page.goto("https://yoyaku.sumidacity-gym.com/index.php");
@@ -85,7 +71,7 @@ test("Check availability", async ({ browser }) => {
   // 标记是否找到了周末时段
   let hasWeekendSlot = false;
 
-  const checkAreaTime = async (area, type?: "day" | "night") => {
+  const checkAreaTime = async (area) => {
     const areaAvailability: string[] = [];
     // Check current month and next 3 months (total 4 months)
     for (let i = 0; i < 4; i++) {
@@ -146,10 +132,7 @@ test("Check availability", async ({ browser }) => {
             await page.waitForLoadState("domcontentloaded");
 
             // Define time ranges
-            const dayTimeMap = ["9-12", "12-15", "15-18", "18-21🔥"];
-            const nightTimeMap = ["21-22:30🌙"];
-
-            const timeMap = type === "night" ? nightTimeMap : dayTimeMap;
+            const timeMap = ["9-12", "12-15", "15-18", "18-21🔥"];
             // Extract available time slots from the detailed view
             const timeSlots = await page.locator("td.f-sizeup").all();
 
@@ -185,12 +168,8 @@ test("Check availability", async ({ browser }) => {
                 hasPrimeTime = true;
               }
 
-              // 只在日间体育设施检查是否是周末 (排除夜间设施)
-              if (
-                type !== "night" &&
-                !hasWeekendSlot &&
-                (weekday === "六" || weekday === "日")
-              ) {
+              // 检查是否是周末
+              if (!hasWeekendSlot && (weekday === "六" || weekday === "日")) {
                 hasWeekendSlot = true;
                 // 如果是周末，在时间前面添加周末标识，帮助用户识别
                 const formattedWithWeekend = formattedTimeSlots
@@ -277,57 +256,6 @@ test("Check availability", async ({ browser }) => {
           await page.waitForLoadState("domcontentloaded");
 
           await checkAreaTime(area);
-
-          // Go back to the area selection page
-          await page.getByRole("link", { name: "戻る" }).click();
-          await page.waitForLoadState("domcontentloaded");
-
-          await page.getByRole("link", { name: "次の一覧" }).click();
-          await page.waitForLoadState("domcontentloaded");
-        });
-      }
-    });
-  });
-
-  await page.getByRole("link", { name: "戻る" }).click();
-  await page.waitForLoadState("domcontentloaded");
-
-  await test.step("check 夜間アリーナ area", async () => {
-    await page.getByRole("link", { name: "夜間アリーナ" }).click();
-    await page.waitForLoadState("domcontentloaded");
-
-    await test.step("Check 夜間アリーナ first page", async () => {
-      // Check availability for all main areas
-      for (const area of nightAreaList) {
-        await test.step(`Select area: ${area}`, async () => {
-          console.log(`Checking availability for: ${area}`);
-          await page.getByRole("link", { name: area }).click();
-          await page.waitForLoadState("domcontentloaded");
-
-          await checkAreaTime(area, "night");
-
-          // Go back to the area selection page
-          await page.getByRole("link", { name: "戻る" }).click();
-          await page.waitForLoadState("domcontentloaded");
-        });
-      }
-    });
-
-    // Move to next list for sub-arenas
-    await test.step("Go to next list of areas", async () => {
-      await page.getByRole("link", { name: "次の一覧" }).click();
-      await page.waitForLoadState("domcontentloaded");
-    });
-
-    await test.step("Check 夜間アリーナ second page", async () => {
-      // Check availability for all sub-arena areas
-      for (const area of nightNextAreaList) {
-        await test.step(`Select area: ${area}`, async () => {
-          console.log(`Checking availability for: ${area}`);
-          await page.getByRole("link", { name: area }).click();
-          await page.waitForLoadState("domcontentloaded");
-
-          await checkAreaTime(area, "night");
 
           // Go back to the area selection page
           await page.getByRole("link", { name: "戻る" }).click();
