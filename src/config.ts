@@ -23,9 +23,6 @@ export const config = {
   minatoPassword: process.env.MINATO_PASSWORD,
 
   webhookPort: "3000",
-  // Time-based notification settings
-  priorityHours: [20], // Hours when notifications should always be sent
-  rangeMinutes: Number(process.env.RANGE_MINUTES || 15), // Minutes before and after priority hours to send notifications,
 
   // 要過濾掉的日期，格式為 "YYYY/MM/DD"
   excludedDates: process.env.EXCLUDED_DATES
@@ -64,18 +61,6 @@ export const getAllExcludedDates = (): string[] => {
   const recentDates = getRecentDatesToExclude();
   const allExcluded = [...new Set([...config.excludedDates, ...recentDates])];
   return allExcluded;
-};
-
-// 檢查是否在優先時間內（只針對 20:00）
-export const isPriorityTime = (): boolean => {
-  const now = new Date();
-  const japanHour = (now.getUTCHours() + 9) % 24;
-  const japanMinute = now.getUTCMinutes();
-
-  // 只檢查 20:00 ~ 20:15
-  return (
-    japanHour === 20 && japanMinute >= 0 && japanMinute <= config.rangeMinutes
-  );
 };
 
 // CI 排程本身刻意跳過日本時間 01:00～05:59（見 .github/workflows/check-availability.yml 的

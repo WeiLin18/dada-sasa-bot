@@ -1,6 +1,6 @@
 import type { Page, Locator } from "@playwright/test";
 import { test } from "@playwright/test";
-import { isPriorityTime, isNightBlackout, getAllExcludedDates } from "../src/config";
+import { isNightBlackout, getAllExcludedDates } from "../src/config";
 import { sendLineFlexMessage } from "./sendLineMessage";
 import * as fs from "fs";
 import * as path from "path";
@@ -193,24 +193,6 @@ test("查詢台東設施的晚上時段可用性", async ({ browser }) => {
       const buttonUrl = "https://shisetsu.city.taito.lg.jp/";
       const buttonLabel = "予約サイトへ";
       console.log("🚀 ~ awaittest.step ~ contents:", contents);
-
-      // 確保沒有空字符串
-      const filteredContents = contents.filter((item) => item !== "");
-
-      await sendLineFlexMessage(
-        title,
-        filteredContents,
-        buttonUrl,
-        buttonLabel,
-      );
-    } else {
-      if (!isPriorityTime()) return;
-      console.log("台東 - 未找到晚上或週末可用位置");
-      // 發送無可用位置的通知
-      const title = `🏸 台東施設情報`;
-      const contents = ["目前沒有晚上或週末可用位置"];
-      const buttonUrl = "https://shisetsu.city.taito.lg.jp/";
-      const buttonLabel = "予約サイトへ";
 
       // 確保沒有空字符串
       const filteredContents = contents.filter((item) => item !== "");
