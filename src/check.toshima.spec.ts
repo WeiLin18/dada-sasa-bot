@@ -193,6 +193,17 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
       await page.waitForLoadState("domcontentloaded");
       await page.waitForTimeout(4000);
 
+      // 少數情況下站台會跳出「エラー」提示（例如勾選狀態未成功套用），並停留在原頁面
+      // 而不是導向時間帯別空き状況。remodal-overlay 不會自己消失，若不先處理，
+      // 後面點「前に戻る」會被 overlay 擋住，一路重試到 test timeout。
+      const errorDialog = page.locator(".remodal", { hasText: "エラー" });
+      if (await errorDialog.isVisible().catch(() => false)) {
+        console.warn(`[區間 ${period + 1}] 跳出錯誤提示，關閉後跳過此區間`);
+        await page.keyboard.press("Escape");
+        await page.waitForTimeout(300);
+        return;
+      }
+
       const rows = await parseTimeSlotPage();
       console.log(`[區間 ${period + 1}] 解析到 ${rows.length} 列有空時段`);
       for (const row of rows) {
