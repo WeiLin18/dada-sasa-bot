@@ -53,6 +53,20 @@ PASSWORD=your_gym_password
    - `USER_ID`: Your gym system user ID
    - `PASSWORD`: Your gym system password
 
+## Excluded Dates (dates you don't want notifications for)
+
+Dates to skip are listed in [`excluded-dates.txt`](excluded-dates.txt) at the repo root, one per line in `YYYY/MM/DD` format. Blank lines and lines starting with `#` are ignored. Invalid lines are logged as warnings and skipped; they never fail the run. The `EXCLUDED_DATES` GitHub Actions secret is **no longer used** and can be deleted.
+
+The file is read on every run, so a commit to `main` takes effect on the next scheduled check. The current list is also shown at the bottom of each LINE notification.
+
+### Editing from the GitHub mobile app
+
+1. Open the repository in the GitHub app and tap **Code**.
+2. Tap `excluded-dates.txt`.
+3. Tap the **pencil (Edit)** icon in the top-right corner.
+4. Add or remove lines (one `YYYY/MM/DD` per line).
+5. Tap **Commit changes**, keep the target branch as `main`, and confirm.
+
 ## Usage
 
 ### GitHub Actions
