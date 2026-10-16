@@ -70,29 +70,45 @@ export type Command = {
 const splitTokens = (s: string): string[] =>
   s.split(/[\s,、，;；]+/).map((t) => t.trim()).filter(Boolean);
 
+/** Default trigger words; the message must start with one of them. */
+export const DEFAULT_PREFIXES = ["波特醬", "@打打殺殺波特醬"];
+
 /**
  * Parse a LINE text message into a command, or null when the message is not
  * addressed to us (no reply should be sent).
  *
- *   排除 11/03 11/05        add
- *   +11/03 11/05            add
- *   取消排除 2026/11/05     remove
- *   -11/05                  remove
- *   排除清單 / ?             list
+ * The message must start with a trigger prefix (default 波特醬, or the LINE
+ * @-mention text). What follows is the command:
  *
- * Multiple lines are allowed; each line is parsed on its own, so a message
- * can add and remove in one go.
+ *   波特醬 排除 11/03 11/05        add
+ *   波特醬 +11/03 11/05            add
+ *   波特醬 取消排除 2026/11/05     remove
+ *   波特醬 -11/05                  remove
+ *   波特醬 排除清單 / 波特醬 ?      list
+ *   波特醬                         list
+ *
+ * After the prefix, multiple lines are allowed; each line is parsed on its
+ * own, so a message can add and remove in one go.
  */
-export const parseCommand = (text: string, now: Date = new Date()): Command | null => {
-  const normalized = text.normalize("NFKC").replace(/\r/g, "");
-  const lines = normalized
+export const parseCommand = (
+  text: string,
+  now: Date = new Date(),
+  prefixes: string[] = DEFAULT_PREFIXES
+): Command | null => {
+  const normalized = text.normalize("NFKC").replace(/\r/g, "").trim();
+  const prefix = prefixes
+    .map((p) => p.normalize("NFKC").trim())
+    .filter(Boolean)
+    .find((p) => normalized.startsWith(p));
+  if (prefix === undefined) return null;
+  const body = normalized.slice(prefix.length).replace(/^[\s,:：、]+/, "");
+
+  const lines = body
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  if (lines.length === 0) return null;
 
-  let matched = false;
-  let listOnly = false;
+  let listOnly = lines.length === 0;
   const add: string[] = [];
   const remove: string[] = [];
   const invalid: string[] = [];
@@ -107,22 +123,21 @@ export const parseCommand = (text: string, now: Date = new Date()): Command | nu
 
   for (const line of lines) {
     if (line === "?" || line === "排除清單" || line === "清單") {
-      matched = true;
       listOnly = true;
       continue;
     }
     let m: RegExpMatchArray | null;
     if ((m = line.match(/^(?:取消排除|-)\s*(.*)$/))) {
-      matched = true;
       collect(m[1], remove);
     } else if ((m = line.match(/^(?:排除|\+)\s*(.*)$/))) {
-      matched = true;
       collect(m[1], add);
+    } else {
+      // Addressed to us but not a command we know: show the list so the
+      // user sees the bot is alive, and treat the line as invalid input.
+      invalid.push(line);
     }
-    // Any other line is ignored (free chat in the group).
   }
 
-  if (!matched) return null;
   const hasChanges = add.length > 0 || remove.length > 0 || invalid.length > 0;
   return {
     kind: listOnly && !hasChanges ? "list" : "update",

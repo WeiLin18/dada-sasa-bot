@@ -4,6 +4,7 @@ import {
   formatReply,
   parseCommand,
   parseExcludedFile,
+  DEFAULT_PREFIXES,
   serializeExcludedFile,
   type ApplyResult,
   type Command,
@@ -18,6 +19,8 @@ export interface Env {
   ALLOWED_GROUP_ID: string;
   /** Defaults to excluded-dates.txt */
   FILE_PATH?: string;
+  /** Comma-separated trigger words; defaults to DEFAULT_PREFIXES in lib.ts */
+  TRIGGER_PREFIXES?: string;
 }
 
 type LineEvent = {
@@ -161,7 +164,10 @@ const handleEvent = async (env: Env, ev: LineEvent): Promise<void> => {
   if (!ev.replyToken || !ev.message.text) return;
   if (ev.source?.groupId !== env.ALLOWED_GROUP_ID) return;
 
-  const cmd = parseCommand(ev.message.text);
+  const prefixes = env.TRIGGER_PREFIXES
+    ? env.TRIGGER_PREFIXES.split(",").map((p) => p.trim()).filter(Boolean)
+    : DEFAULT_PREFIXES;
+  const cmd = parseCommand(ev.message.text, new Date(), prefixes);
   if (!cmd) return;
 
   try {

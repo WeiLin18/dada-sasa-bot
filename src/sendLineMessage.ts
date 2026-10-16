@@ -1,5 +1,14 @@
 import { config } from "./config";
 
+// 把目前排除的靜態日期（excluded-dates.txt）整理成一行，顯示在 Flex 訊息底部
+const formatExcludedDatesFooter = (): string => {
+  const dates = config.excludedDates;
+  if (dates.length === 0) return "排除日期：無";
+  // 顯示成 MM/DD，去掉年份以節省空間
+  const short = dates.map((d) => d.slice(5));
+  return `排除日期：${short.join(" ")}`;
+};
+
 export async function getUserLineID() {
   const response = await fetch("https://api.line.me/v2/bot/followers/ids", {
     method: "GET",
@@ -105,24 +114,34 @@ export async function sendLineFlexMessage(
             })),
           paddingBottom: "8px",
         },
-        footer: buttonUrl
-          ? {
-              type: "box",
-              layout: "vertical",
-              contents: [
-                {
-                  type: "button",
-                  action: {
-                    type: "uri",
-                    label: buttonLabel || "查看详情",
-                    uri: buttonUrl,
+        footer: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            ...(buttonUrl
+              ? [
+                  {
+                    type: "button",
+                    action: {
+                      type: "uri",
+                      label: buttonLabel || "查看详情",
+                      uri: buttonUrl,
+                    },
+                    style: "primary",
+                    color: "#1E88E5",
                   },
-                  style: "primary",
-                  color: "#1E88E5",
-                },
-              ],
-            }
-          : null,
+                ]
+              : []),
+            {
+              type: "text",
+              text: formatExcludedDatesFooter(),
+              size: "xxs",
+              color: "#888888",
+              wrap: true,
+              margin: "md",
+            },
+          ],
+        },
       },
     };
 

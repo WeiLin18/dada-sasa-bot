@@ -33,35 +33,48 @@ test("normalizeDate: MM/DD resolves to next non-past occurrence in JST", () => {
   assert.equal(normalizeDate("1/5", NOW), "2027/01/05");
 });
 
-test("parseCommand: add / remove / list / ignore", () => {
-  assert.deepEqual(parseCommand("排除 11/03 11/05", NOW), {
+test("parseCommand: requires trigger prefix", () => {
+  assert.equal(parseCommand("排除 11/03", NOW), null);
+  assert.equal(parseCommand("?", NOW), null);
+  assert.equal(parseCommand("-11/05", NOW), null);
+  assert.equal(parseCommand("今天打球嗎", NOW), null);
+  assert.equal(parseCommand("", NOW), null);
+  assert.equal(parseCommand("波特醬", NOW)?.kind, "list");
+  assert.equal(parseCommand("@打打殺殺波特醬 ?", NOW)?.kind, "list");
+  assert.equal(parseCommand("咒語 ?", NOW, ["咒語"])?.kind, "list");
+});
+
+test("parseCommand: add / remove / list", () => {
+  assert.deepEqual(parseCommand("波特醬 排除 11/03 11/05", NOW), {
     kind: "update",
     add: ["2026/11/03", "2026/11/05"],
     remove: [],
     invalid: [],
   });
-  assert.deepEqual(parseCommand("+2026/11/05, 11/03, xyz", NOW), {
+  assert.deepEqual(parseCommand("波特醬 +2026/11/05, 11/03, xyz", NOW), {
     kind: "update",
     add: ["2026/11/03", "2026/11/05"],
     remove: [],
     invalid: ["xyz"],
   });
-  assert.deepEqual(parseCommand("取消排除 11/05", NOW), {
+  assert.deepEqual(parseCommand("波特醬 取消排除 11/05", NOW), {
     kind: "update",
     add: [],
     remove: ["2026/11/05"],
     invalid: [],
   });
-  assert.deepEqual(parseCommand("-11/05", NOW)?.remove, ["2026/11/05"]);
-  assert.equal(parseCommand("排除清單", NOW)?.kind, "list");
-  assert.equal(parseCommand("?", NOW)?.kind, "list");
-  assert.equal(parseCommand("？", NOW)?.kind, "list"); // full-width
-  assert.equal(parseCommand("今天打球嗎", NOW), null);
-  assert.equal(parseCommand("", NOW), null);
+  assert.deepEqual(parseCommand("波特醬-11/05", NOW)?.remove, ["2026/11/05"]);
+  assert.equal(parseCommand("波特醬 排除清單", NOW)?.kind, "list");
+  assert.equal(parseCommand("波特醬 ?", NOW)?.kind, "list");
+  assert.equal(parseCommand("波特醬 ？", NOW)?.kind, "list"); // full-width
+  // Addressed to the bot but not a known command: reply with list + invalid.
+  const unknown = parseCommand("波特醬 你好", NOW);
+  assert.equal(unknown?.kind, "update");
+  assert.deepEqual(unknown?.invalid, ["你好"]);
 });
 
 test("parseCommand: full-width spaces, digits and multi-line", () => {
-  const cmd = parseCommand("排除　１１／０３\n-11/05", NOW);
+  const cmd = parseCommand("波特醬　排除　１１／０３\n-11/05", NOW);
   assert.deepEqual(cmd, {
     kind: "update",
     add: ["2026/11/03"],
@@ -85,7 +98,7 @@ test("parseExcludedFile on empty / no header", () => {
 
 test("applyCommand add/remove is idempotent and reports", () => {
   const file = parseExcludedFile("# h\n\n2026/11/01\n2026/11/05\n");
-  const cmd = parseCommand("排除 2026/11/01 2026/11/03\n取消排除 2026/11/05 2026/11/09", NOW)!;
+  const cmd = parseCommand("波特醬 排除 2026/11/01 2026/11/03\n取消排除 2026/11/05 2026/11/09", NOW)!;
   const r = applyCommand(file, cmd);
   assert.deepEqual(r.added, ["2026/11/03"]);
   assert.deepEqual(r.alreadyPresent, ["2026/11/01"]);
@@ -95,7 +108,7 @@ test("applyCommand add/remove is idempotent and reports", () => {
   assert.deepEqual(r.file.dates, ["2026/11/01", "2026/11/03"]);
   assert.equal(commitMessage(r), "chore: excluded dates via LINE (+2026/11/03 -2026/11/05)");
 
-  const noop = applyCommand(r.file, parseCommand("排除 2026/11/01", NOW)!);
+  const noop = applyCommand(r.file, parseCommand("波特醬 排除 2026/11/01", NOW)!);
   assert.equal(noop.changed, false);
 });
 
@@ -108,7 +121,7 @@ test("formatListByMonth groups by month", () => {
 
 test("formatReply includes confirmation and list", () => {
   const file = parseExcludedFile("2026/11/01\n");
-  const cmd = parseCommand("排除 11/03 foo", NOW)!;
+  const cmd = parseCommand("波特醬 排除 11/03 foo", NOW)!;
   const r = applyCommand(file, cmd);
   const text = formatReply(cmd, r, r.file.dates);
   assert.match(text, /✅ 已排除：2026\/11\/03/);
