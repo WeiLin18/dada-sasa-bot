@@ -9,18 +9,24 @@ reads the file from `main` on its next run.
 
 ## Commands (send in the group)
 
+Every command must start with the trigger word **`波特醬`** (or an
+@-mention of the bot, which LINE expands to `@打打殺殺波特醬`). Messages that
+do not start with it are ignored, so normal chat never triggers the bot.
+
 | Message | Effect |
 | --- | --- |
-| `排除 11/03 11/05` or `+11/03 11/05` | add dates |
-| `取消排除 2026/11/05` or `-11/05` | remove dates |
-| `排除清單` or `?` | show the current list |
-| anything else | ignored, no reply |
+| `波特醬` or `波特醬 ?` or `波特醬 排除清單` | show the current list |
+| `波特醬 排除 11/03 11/05` or `波特醬 +11/03 11/05` | add dates |
+| `波特醬 取消排除 2026/11/05` or `波特醬 -11/05` | remove dates |
+| `波特醬 <anything else>` | shows the list and flags the text as not understood |
+| anything without the trigger word | ignored, no reply |
 
 - Dates: `YYYY/MM/DD` or `MM/DD` (also `-`/`.` separators, 1-digit month/day,
   full-width digits and spaces). `MM/DD` becomes the next occurrence that is not
   in the past, Japan time.
 - Separate several dates with spaces or commas. A message may have several
-  lines, e.g. `+11/03` on one line and `-11/05` on the next.
+  lines after the trigger word, e.g. `波特醬 +11/03` on one line and `-11/05`
+  on the next.
 - Adding an existing date or removing a missing one is not an error; the reply
   just says so. Invalid tokens are listed back.
 - The reply always ends with the current list grouped by month:
@@ -28,6 +34,8 @@ reads the file from `main` on its next run.
 - The file's header comments are preserved; dates are deduped and sorted.
 - The commit message looks like
   `chore: excluded dates via LINE (+2026/11/03 -2026/11/05)`.
+- To change the trigger word, edit `TRIGGER_PREFIXES` in `wrangler.toml`
+  (comma-separated) and redeploy.
 
 ## Layout
 
@@ -55,6 +63,7 @@ pnpm --dir worker test
 | `ALLOWED_GROUP_ID` | secret | The LINE group id (`C…`). Messages from any other source are ignored silently. |
 | `GITHUB_REPO` | var | `owner/repo`, set in `wrangler.toml` (`WeiLin18/dada-sasa-bot`). |
 | `FILE_PATH` | var | Path of the dates file in the repo. Optional, defaults to `excluded-dates.txt`. |
+| `TRIGGER_PREFIXES` | var | Comma-separated trigger words a message must start with. Optional, defaults to `波特醬,@打打殺殺波特醬`. |
 
 Set the secrets once from `worker/`:
 
@@ -119,7 +128,7 @@ scan results as before and never receives a webhook.
    webhook only if *Allow bot to join group chats* is enabled, which it is
    when the bot is already posting there.
 
-Then send `?` in the group. You should get the current list back within a
+Then send `波特醬 ?` in the group. You should get the current list back within a
 second or two. `npx wrangler tail` shows live logs if nothing arrives.
 
 ## Behaviour details

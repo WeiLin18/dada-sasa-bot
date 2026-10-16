@@ -7,3 +7,5 @@ compatibility_date = "2025-01-01"
 [vars]
 GITHUB_REPO = "WeiLin18/dada-sasa-bot"
 FILE_PATH = "excluded-dates.txt"
+# Messages must start with one of these (comma-separated) to be treated as commands.
+TRIGGER_PREFIXES = "波特醬,@打打殺殺波特醬"
