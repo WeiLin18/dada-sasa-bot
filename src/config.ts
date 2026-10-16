@@ -1,6 +1,62 @@
 import dotenv from "dotenv";
+import fs from "node:fs";
+import path from "node:path";
 
 dotenv.config();
+
+// 排除日期清單檔案（repo 根目錄），可直接在 GitHub 手機 App 編輯
+export const EXCLUDED_DATES_FILE = path.resolve(
+  __dirname,
+  "..",
+  "excluded-dates.txt"
+);
+
+const DATE_PATTERN = /^\d{4}\/\d{2}\/\d{2}$/;
+
+// 檢查 "YYYY/MM/DD" 字串是否為真實存在的日期（例如 2026/02/30 會被拒絕）
+const isRealDate = (value: string): boolean => {
+  const [year, month, day] = value.split("/").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+};
+
+// 解析清單內容：忽略空白行與 # 註解，格式錯誤或不存在的日期會印警告並略過
+export const parseExcludedDates = (content: string, source: string): string[] => {
+  const dates: string[] = [];
+  content.split(/\r?\n/).forEach((rawLine, index) => {
+    const line = rawLine.replace(/#.*$/, "").trim();
+    if (!line) return;
+    if (!DATE_PATTERN.test(line) || !isRealDate(line)) {
+      console.warn(
+        `[excluded-dates] ${source}:${index + 1} 不是有效的 YYYY/MM/DD 日期，已略過: "${rawLine.trim()}"`
+      );
+      return;
+    }
+    dates.push(line);
+  });
+  return [...new Set(dates)];
+};
+
+// 讀取 excluded-dates.txt；檔案不存在時退回 EXCLUDED_DATES 環境變數（逗號分隔），再不然就是空清單
+const loadExcludedDates = (): string[] => {
+  if (fs.existsSync(EXCLUDED_DATES_FILE)) {
+    return parseExcludedDates(
+      fs.readFileSync(EXCLUDED_DATES_FILE, "utf8"),
+      path.basename(EXCLUDED_DATES_FILE)
+    );
+  }
+  console.warn(
+    `[excluded-dates] 找不到 ${EXCLUDED_DATES_FILE}，改用 EXCLUDED_DATES 環境變數`
+  );
+  return parseExcludedDates(
+    (process.env.EXCLUDED_DATES ?? "").split(",").join("\n"),
+    "EXCLUDED_DATES"
+  );
+};
 
 export const config = {
   botPotterLineChannelAccessToken:
@@ -24,10 +80,8 @@ export const config = {
 
   webhookPort: "3000",
 
-  // 要過濾掉的日期，格式為 "YYYY/MM/DD"
-  excludedDates: process.env.EXCLUDED_DATES
-    ? process.env.EXCLUDED_DATES.split(",")
-    : ["2025/12/26", "2026/01/03"],
+  // 要過濾掉的日期，格式為 "YYYY/MM/DD"，來源為 repo 根目錄的 excluded-dates.txt
+  excludedDates: loadExcludedDates(),
 
   // 要排除的近期天數（從今天算起）
   excludeRecentDays: 8,
