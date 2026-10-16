@@ -1,0 +1,19 @@
+{
+  "name": "dada-sasa-line-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker: manage excluded-dates.txt from LINE",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/*.test.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^4.0.0"
+  }
+}

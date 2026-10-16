@@ -1,0 +1,9 @@
+name = "dada-sasa-line-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Non-secret vars. Secrets (LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN,
+# GITHUB_TOKEN, ALLOWED_GROUP_ID) are set with `wrangler secret put` — see README.md.
+[vars]
+GITHUB_REPO = "WeiLin18/dada-sasa-bot"
+FILE_PATH = "excluded-dates.txt"
