@@ -34,6 +34,18 @@ const WEEKDAY_EVENING_FROM = 18 * 60;
 const MAX_PERIODS = 4;
 const PERIOD_DAYS = 30;
 
+// 單一點擊的上限。站台跳出對話框時遮罩會攔截所有點擊，而遮罩不會自己消失，
+// 沒有這個上限的話單一個點擊就會一路重試到整份測試 timeout（10 分鐘）為止。
+const CLICK_TIMEOUT = 15000;
+
+// 站台一次最多只能勾 20 個日期。勾第 21 個時不但不會生效，還會把
+// location.hash 設成 #messageDlg，讓錯誤對話框自動彈出來把整頁蓋住，
+// 之後每個點擊都被遮罩攔截，一路重試到測試逾時。
+// 所以超過 20 個就分批送出，一批一批查。
+const MAX_DATES_PER_SUBMIT = 20;
+// 分批的保險上限，避免極端情況下無限迴圈
+const MAX_BATCHES_PER_PERIOD = 5;
+
 // 單一時段（例：9:00～12:00）
 interface Slot {
   start: number; // 開始時間（當日分鐘數）
@@ -130,96 +142,118 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
       const startDateText = `${startDate.getFullYear()}/${
         startDate.getMonth() + 1
       }/${startDate.getDate()}`;
+      const label = `區間 ${period + 1}`;
 
-      await page.locator("#dpStartDate").fill(startDateText);
-      await page.locator('label[for="radioPeriod1month"]').click();
-      await page.locator("#btnHyoji").click();
-      await page.waitForLoadState("domcontentloaded");
-      await page.waitForTimeout(3500);
-      console.log(`[區間 ${period + 1}] 顯示開始日: ${startDateText}`);
+      for (let batch = 0; batch < MAX_BATCHES_PER_PERIOD; batch++) {
+        // 每一批都重新套用顯示條件再重新抓一次候選，
+        // 這樣 checkdate 的編號一定對應到當下畫面，不會因為返回後版面變動而錯位
+        await showPeriod(startDateText);
+        await dismissBlockingDialog(`${label} 批次 ${batch + 1} 表示後`);
 
-      // 找出所有有空（○ / △）的日期，並排除近期與指定排除日
-      const excludedDates = getAllExcludedDates();
-      const { bookableCells, candidates } = await page.evaluate(() => {
-        const found: { id: string; date: string }[] = [];
-        let bookable = 0;
-
-        document
-          .querySelectorAll("table.calendar.horizon tbody td")
-          .forEach((td) => {
-            const input = td.querySelector(
-              "input[name=checkdate]"
-            ) as HTMLInputElement | null;
-            // 申込期間外（－）與休館日沒有 checkbox，用這個判斷是否還在開放期間內
-            if (!input) return;
-            bookable += 1;
-
-            const mark = (td.textContent || "").trim();
-            if (mark !== "○" && mark !== "△") return;
-            // value 格式：20260824 + 場地代碼，前 8 碼為日期
-            const raw = input.value.slice(0, 8);
-            found.push({
-              id: input.id,
-              date: `${raw.slice(0, 4)}/${raw.slice(4, 6)}/${raw.slice(6, 8)}`,
-            });
-          });
-
-        return { bookableCells: bookable, candidates: found };
-      });
-
-      // 整個區間都在申込期間外，代表已經掃到開放期間的尾巴了
-      if (bookableCells === 0) {
-        console.log(`[區間 ${period + 1}] 已超出申込期間，結束掃描`);
-        reachedEndOfWindow = true;
-        return;
-      }
-
-      const targets = candidates.filter(({ date }) => {
-        if (excludedDates.includes(date)) {
-          console.log(`跳過排除日期: ${date}`);
-          return false;
+        // 送出後按「前に戻る」回來時，上一批的勾選還留著。不清掉的話下一批會
+        // 疊加上去，不但很快撞到 20 個的上限，解析結果也會重複計入。
+        const cleared = await clearDateSelections();
+        if (cleared > 0) {
+          console.log(`[${label}] 批次 ${batch + 1}：清掉上一批的 ${cleared} 個勾選`);
         }
-        return true;
-      });
 
-      console.log(`[區間 ${period + 1}] 有空的日期數: ${targets.length}`);
-      if (targets.length === 0) return;
+        const { bookableCells, candidates } = await collectCandidates();
 
-      for (const { id } of targets) {
-        await page.locator(`label[for="${id}"]`).click();
-      }
+        // 整個區間都在申込期間外，代表已經掃到開放期間的尾巴了
+        if (bookableCells === 0) {
+          console.log(`[${label}] 已超出申込期間，結束掃描`);
+          reachedEndOfWindow = true;
+          return;
+        }
 
-      await page.getByRole("link", { name: "次へ進む" }).click();
-      await page.waitForLoadState("domcontentloaded");
-      await page.waitForTimeout(4000);
+        const excludedDates = getAllExcludedDates();
+        const targets = candidates.filter(({ date }) => {
+          if (!excludedDates.includes(date)) return true;
+          if (batch === 0) console.log(`跳過排除日期: ${date}`);
+          return false;
+        });
 
-      // 少數情況下站台會跳出「エラー」提示（例如勾選狀態未成功套用），並停留在原頁面
-      // 而不是導向時間帯別空き状況。remodal-overlay 不會自己消失，且對話框本身寫明
-      // 只能用右上角的 × 關閉（Esc 對它無效），若不點掉會擋住下一輪所有點擊，
-      // 一路重試到 test timeout。
-      const errorDialog = page.locator(".remodal", { hasText: "エラー" });
-      if (await errorDialog.isVisible().catch(() => false)) {
-        console.warn(`[區間 ${period + 1}] 跳出錯誤提示，關閉後跳過此區間`);
-        await page.locator("a.remodal-close:visible").first().click();
-        await page.waitForTimeout(300);
-        return;
-      }
+        if (batch === 0) {
+          console.log(
+            `[${label}] 有空的日期數: ${targets.length}（每批最多 ${MAX_DATES_PER_SUBMIT} 個）`
+          );
+        }
 
-      const rows = await parseTimeSlotPage();
-      console.log(`[區間 ${period + 1}] 解析到 ${rows.length} 列有空時段`);
-      for (const row of rows) {
-        console.log(
-          `  ${row.facility} ${row.room} ${row.date}(${row.weekday}) 週末=${
-            row.isWeekend
-          }: ${row.slots.map((slot) => slot.label).join(", ")}`
+        const chunk = targets.slice(
+          batch * MAX_DATES_PER_SUBMIT,
+          (batch + 1) * MAX_DATES_PER_SUBMIT
         );
-      }
-      allRows.push(...rows);
+        if (chunk.length === 0) return;
 
-      // 回到施設別空き状況，準備掃下一個區間
-      await page.getByRole("link", { name: "前に戻る" }).first().click();
-      await page.waitForLoadState("domcontentloaded");
-      await page.waitForTimeout(3000);
+        console.log(
+          `[${label}] 批次 ${batch + 1}：勾選 ${chunk.length} 個日期`
+        );
+
+        // 一旦遇過被遮擋，之後就直接用 DOM 點擊，不用每個都先白等一次逾時
+        let useDomClick = false;
+        let blocked = false;
+
+        for (const { id } of chunk) {
+          if (!useDomClick) {
+            try {
+              await page
+                .locator(`label[for="${id}"]`)
+                .click({ timeout: CLICK_TIMEOUT });
+              continue;
+            } catch {
+              // 可能是對話框遮罩，也可能是表格的固定表頭浮層蓋住了格子
+              await dismissBlockingDialog(`${label} 勾選 ${id}`);
+              useDomClick = true;
+            }
+          }
+
+          if (!(await toggleDateByDom(id))) {
+            console.warn(`[${label}] 勾選 ${id} 失敗，跳過此批次`);
+            blocked = true;
+            break;
+          }
+        }
+        if (blocked) continue;
+
+        await page
+          .getByRole("link", { name: "次へ進む" })
+          .click({ timeout: CLICK_TIMEOUT });
+        await page.waitForLoadState("domcontentloaded");
+        await page.waitForTimeout(4000);
+
+        await dismissBlockingDialog(`${label} 次へ進む後`);
+
+        // 跳出對話框時站台會停留在原頁面而不是導向時間帯別空き状況。
+        // 用網址判斷有沒有真的換頁，比比對對話框文字可靠（訊息內容會變）。
+        if (!page.url().includes("JikantaibetsuAkiJoukyou")) {
+          console.warn(
+            `[${label}] 批次 ${batch + 1} 未進入時間帯別空き状況，跳過（URL: ${page.url()}）`
+          );
+          continue;
+        }
+
+        const rows = await parseTimeSlotPage();
+        console.log(
+          `[${label}] 批次 ${batch + 1} 解析到 ${rows.length} 列有空時段`
+        );
+        for (const row of rows) {
+          console.log(
+            `  ${row.facility} ${row.room} ${row.date}(${row.weekday}) 週末=${
+              row.isWeekend
+            }: ${row.slots.map((slot) => slot.label).join(", ")}`
+          );
+        }
+        allRows.push(...rows);
+
+        // 回到施設別空き状況，準備下一批
+        await page
+          .getByRole("link", { name: "前に戻る" })
+          .first()
+          .click({ timeout: CLICK_TIMEOUT });
+        await page.waitForLoadState("domcontentloaded");
+        await page.waitForTimeout(3000);
+        await dismissBlockingDialog(`${label} 前に戻る後`);
+      }
     });
   }
 
@@ -277,6 +311,145 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
     console.log("LINE notification sent successfully");
   });
 });
+
+/**
+ * 套用「表示開始日 + 1ヶ月」並按下表示
+ */
+async function showPeriod(startDateText: string): Promise<void> {
+  await page.locator("#dpStartDate").fill(startDateText);
+  await page.locator('label[for="radioPeriod1month"]').click();
+  await page.locator("#btnHyoji").click({ timeout: CLICK_TIMEOUT });
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(3500);
+}
+
+/**
+ * 抓出畫面上所有有空（○ / △）的日期，
+ * 同時回報有多少格子是可申請的（用來判斷是否已超出申込期間）
+ */
+async function collectCandidates(): Promise<{
+  bookableCells: number;
+  candidates: { id: string; date: string }[];
+}> {
+  return await page.evaluate(() => {
+    const found: { id: string; date: string }[] = [];
+    let bookable = 0;
+
+    document
+      .querySelectorAll("table.calendar.horizon tbody td")
+      .forEach((td) => {
+        const input = td.querySelector(
+          "input[name=checkdate]"
+        ) as HTMLInputElement | null;
+        // 申込期間外（－）與休館日沒有 checkbox，用這個判斷是否還在開放期間內
+        if (!input) return;
+        bookable += 1;
+
+        const mark = (td.textContent || "").trim();
+        if (mark !== "○" && mark !== "△") return;
+        // value 格式：20260824 + 場地代碼，前 8 碼為日期
+        const raw = input.value.slice(0, 8);
+        found.push({
+          id: input.id,
+          date: `${raw.slice(0, 4)}/${raw.slice(4, 6)}/${raw.slice(6, 8)}`,
+        });
+      });
+
+    return { bookableCells: bookable, candidates: found };
+  });
+}
+
+/**
+ * 取消畫面上所有已勾選的日期，回傳清掉的數量。
+ * 走 label 的點擊而不是直接改 checked，讓站台自己的計數也跟著更新。
+ */
+async function clearDateSelections(): Promise<number> {
+  return await page.evaluate(() => {
+    const inputs = [
+      ...document.querySelectorAll("input[name=checkdate]"),
+    ] as HTMLInputElement[];
+    let cleared = 0;
+
+    inputs.forEach((input) => {
+      if (!input.checked) return;
+      const label = document.querySelector(
+        `label[for="${input.id}"]`
+      ) as HTMLElement | null;
+      if (label) label.click();
+      else input.checked = false;
+      cleared += 1;
+    });
+
+    return cleared;
+  });
+}
+
+/**
+ * 直接在 DOM 上點 label 來勾選日期。
+ *
+ * 這張表有固定表頭的浮層（_fixedhead），站台又可能跳出對話框遮罩，
+ * 兩者都會攔截滑鼠事件，讓一般的點擊一路重試到逾時。DOM 點擊不經過
+ * 命中測試，可以繞過這兩種遮擋，而且照樣會觸發 label 綁定的事件。
+ *
+ * 回傳是否確實已勾選；沒勾到就回 false，不會假裝成功。
+ */
+async function toggleDateByDom(inputId: string): Promise<boolean> {
+  return await page.evaluate((id) => {
+    const input = document.getElementById(id) as HTMLInputElement | null;
+    const label = document.querySelector(
+      `label[for="${id}"]`
+    ) as HTMLElement | null;
+    if (!input || !label) return false;
+
+    if (!input.checked) label.click();
+    return input.checked;
+  }, inputId);
+}
+
+/**
+ * 關掉站台跳出的對話框（remodal）。
+ *
+ * 對話框會用 .remodal-overlay 蓋住整頁並攔截所有點擊，遮罩不會自己消失，
+ * 對話框本身也寫明只能用右上角的 × 關閉（Esc 無效）。不關掉的話後續每個
+ * 點擊都會被擋，一路重試到整份測試 timeout。
+ *
+ * 會跳出對話框的情況不只一種，所以不比對內容，只要有遮罩就關：
+ *   - messageDlg：錯誤或提示訊息，內容是動態填入的
+ *   - SesseionTimeoutWarn：連線逾時警告，整份測試跑得久就可能中途跳出
+ *   - shisetsuXXX_info：各設施的お知らせ
+ */
+async function dismissBlockingDialog(context: string): Promise<boolean> {
+  let dismissedAny = false;
+
+  // 關掉一個可能還有下一個，但也不要無限迴圈
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if ((await page.locator(".remodal-overlay:visible").count()) === 0) break;
+
+    const message = await page
+      .locator(".remodal:visible")
+      .first()
+      .innerText()
+      .catch(() => "");
+    console.warn(
+      `[${context}] 偵測到對話框遮罩，關閉中：${message
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80)}`
+    );
+
+    const closeButton = page.locator("a.remodal-close:visible").first();
+    if ((await closeButton.count()) === 0) {
+      console.warn(`[${context}] 對話框沒有可見的關閉鈕，放棄關閉`);
+      break;
+    }
+
+    await closeButton.click({ timeout: CLICK_TIMEOUT }).catch(() => {});
+    await page.waitForTimeout(600);
+    dismissedAny = true;
+  }
+
+  return dismissedAny;
+}
 
 /**
  * 解析「時間帯別空き状況」頁面，取出每個設施 × 場地 × 日期中有 ○ 的時段
