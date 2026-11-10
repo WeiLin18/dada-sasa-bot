@@ -6,7 +6,6 @@ import {
   isNavigationConnectionError,
   isNightBlackout,
   isToshimaReleaseWindow,
-  isToshimaScanWindow,
 } from "../src/config";
 
 let page: Page;
@@ -99,13 +98,6 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
   );
 
   test.skip(isNightBlackout(), "日本時間 01:00-05:59 夜間黑名單時段，跳過測試");
-
-  // 降頻：豊島在 CI 上每 3 小時才掃一次（見 config.ts 的 isToshimaScanWindow），
-  // 其他四個區維持原本的每 40 分鐘。本機手動執行不受影響。
-  test.skip(
-    !!process.env.CI && !isToshimaScanWindow(),
-    "豊島在 CI 上只在 JST 07/10/13/16/19/22 點的整點時段掃描，本次跳過"
-  );
 
   page = await browser.newPage();
 
