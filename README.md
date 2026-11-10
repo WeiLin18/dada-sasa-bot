@@ -71,7 +71,15 @@ The file is read on every run, so a commit to `main` takes effect on the next sc
 
 ### GitHub Actions
 
-The project includes a GitHub Actions workflow configuration that will automatically run checks according to the schedule (every 3 hours by default). You can also manually trigger the workflow from the GitHub interface.
+The project includes a GitHub Actions workflow configuration that runs the checks on a schedule. You can also manually trigger the workflow from the GitHub interface.
+
+#### Check schedule
+
+`.github/workflows/check-availability.yml` runs a single job (`pnpm test`, i.e. every spec) at `:00` and `:40` of each hour, covering JST 06:00-00:59 — about 28 runs a day. `isNightBlackout()` in `src/config.ts` skips every ward during JST 01:00-05:59, in case a scheduled run is delayed into the small hours.
+
+#### When a ward's site is unreachable
+
+Since 2026-11-09 the Toshima site (`www2.pf489.com`) refuses TCP connections from GitHub Actions IP ranges. The Toshima spec therefore wraps its first `page.goto()`: on a connection-level failure it logs the reason and marks itself skipped instead of failing the job. The classifier is `isNavigationConnectionError()` in `src/config.ts` and it is deliberately narrow — certificate errors, HTTP errors, parse failures, missing elements and mid-flow timeouts all still fail as before.
 
 ## System Requirements
 
