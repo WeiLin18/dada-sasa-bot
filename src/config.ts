@@ -137,3 +137,80 @@ export const isToshimaReleaseWindow = (now: Date = new Date()): boolean => {
 
   return (japanDay === 1 || japanDay === 21) && japanHour === 9;
 };
+
+// 豊島區的掃描時段閘門（降頻用）。
+//
+// 背景：check-availability.yml 的 cron 是 `0,40`，也就是每 40 分鐘一次、
+// 一天約 28 次，五個區共用同一個 job。豊島一次掃描要載入的頁面數遠高於其他區
+// （搜尋 → 選設施 → 最多 4 個區間 × 表示/送出/返回，必要時還要分批），
+// 2026-11-09 起站台開始對 GitHub Actions 的來源 IP 擋連線，抓取量很可能就是原因之一。
+// 所以豊島改成每 3 小時掃一次，其他四個區維持原本的頻率。
+//
+// 做法：只在白名單的日本時間整點後 40 分鐘內放行。cron 在每小時的 :00 與 :40 觸發，
+// 所以同一個白名單小時內只有 :00 那一次會通過；留 40 分鐘的寬限是因為 GitHub Actions
+// 的排程觸發是 best-effort，常常延遲十幾分鐘，閘門開太窄會整個時段被跳掉。
+//
+// 選 7/10/13/16/19/22 而不是 6/9/12/15/18/21，是為了避開 09:00 的釋出時段
+// （isToshimaReleaseWindow 每月 1、21 號會擋掉那個小時，剛好會吃掉當天的一次掃描）。
+// 22:00 之後到隔天 07:00 沒有掃描，中間本來就有 01:00-05:59 的夜間黑名單。
+const TOSHIMA_SCAN_JST_HOURS = [7, 10, 13, 16, 19, 22];
+const TOSHIMA_SCAN_GRACE_MINUTES = 40;
+
+// 接受 now 參數是為了可以測邊界，正常呼叫不用傳。
+export const isToshimaScanWindow = (now: Date = new Date()): boolean => {
+  // 先位移成日本時間再讀 UTC 欄位，跟 isToshimaReleaseWindow 同一個做法
+  const japanTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const japanHour = japanTime.getUTCHours();
+  const japanMinute = japanTime.getUTCMinutes();
+
+  return (
+    TOSHIMA_SCAN_JST_HOURS.includes(japanHour) &&
+    japanMinute < TOSHIMA_SCAN_GRACE_MINUTES
+  );
+};
+
+// 「網站連不上」的錯誤特徵。
+//
+// 只列連線層面的失敗（DNS、TCP、網路不通），不含憑證錯誤、HTTP 錯誤碼、
+// 或任何解析/流程上的失敗 —— 那些都代表程式或站台邏輯有問題，必須照舊讓測試紅，
+// 不可以被當成「跳過」吞掉。
+const CONNECTION_ERROR_PATTERNS: RegExp[] = [
+  /net::ERR_CONNECTION_TIMED_OUT/,
+  /net::ERR_CONNECTION_REFUSED/,
+  /net::ERR_CONNECTION_RESET/,
+  /net::ERR_CONNECTION_CLOSED/,
+  /net::ERR_CONNECTION_FAILED/,
+  /net::ERR_CONNECTION_ABORTED/,
+  /net::ERR_NAME_NOT_RESOLVED/,
+  /net::ERR_NAME_RESOLUTION_FAILED/,
+  /net::ERR_ADDRESS_UNREACHABLE/,
+  /net::ERR_NETWORK_CHANGED/,
+  /net::ERR_INTERNET_DISCONNECTED/,
+  /net::ERR_SOCKET_NOT_CONNECTED/,
+  /net::ERR_TIMED_OUT/,
+];
+
+// Playwright 的 goto 逾時訊息，例：
+//   page.goto: Timeout 30000ms exceeded.
+// 連線被靜默丟棄（SYN 沒有回應）時 Chromium 的 ERR_CONNECTION_TIMED_OUT 會比
+// Playwright 的 30 秒 navigation timeout 還晚，所以實際看到的多半是這一種。
+const GOTO_TIMEOUT_PATTERN = /Timeout\s+\d+\s*ms\s+exceeded/i;
+
+/**
+ * 判斷一個 page.goto() 丟出的錯誤是不是「連不到站台」。
+ *
+ * 只給進站那一步用：傳進來的錯誤必須確定是 goto 失敗，
+ * 不要拿去包整份測試，否則流程中段的逾時也會被誤判成連線問題。
+ */
+export const isNavigationConnectionError = (error: unknown): boolean => {
+  const message =
+    error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  if (!message) return false;
+
+  if (CONNECTION_ERROR_PATTERNS.some((pattern) => pattern.test(message))) {
+    return true;
+  }
+
+  // 逾時訊息本身沒有 net:: 代碼，所以額外確認它真的來自 goto
+  return /page\.goto/.test(message) && GOTO_TIMEOUT_PATTERN.test(message);
+};

@@ -3,8 +3,10 @@ import { test } from "@playwright/test";
 import { sendLineFlexMessage } from "../src/sendLineMessage";
 import {
   getAllExcludedDates,
+  isNavigationConnectionError,
   isNightBlackout,
   isToshimaReleaseWindow,
+  isToshimaScanWindow,
 } from "../src/config";
 
 let page: Page;
@@ -98,8 +100,43 @@ test("查詢豊島設施的平日晚上與週末可用性", async ({ browser }) 
 
   test.skip(isNightBlackout(), "日本時間 01:00-05:59 夜間黑名單時段，跳過測試");
 
+  // 降頻：豊島在 CI 上每 3 小時才掃一次（見 config.ts 的 isToshimaScanWindow），
+  // 其他四個區維持原本的每 40 分鐘。本機手動執行不受影響。
+  test.skip(
+    !!process.env.CI && !isToshimaScanWindow(),
+    "豊島在 CI 上只在 JST 07/10/13/16/19/22 點的整點時段掃描，本次跳過"
+  );
+
   page = await browser.newPage();
-  await page.goto(TOSHIMA_URL);
+
+  // 2026-11-09 起，豊島的站台（www2.pf489.com）對 GitHub Actions 的來源網段
+  // 不再接受 TCP 連線：DNS 解析正常，但 443 連不上。這不是程式壞掉，
+  // 重試或換 user-agent 都沒用，所以這種情況記錄清楚後跳過，不要讓整個 job 變紅。
+  //
+  // 只攔連線層面的錯誤。其他任何失敗（解析錯誤、找不到元素、流程卡住）都要照舊丟出來，
+  // 這個專案先前吃過「靜默失效看起來像沒空位」的虧，不要再製造一個。
+  const gotoError = await page
+    .goto(TOSHIMA_URL)
+    .then(() => null)
+    .catch((error: unknown) => error ?? new Error("page.goto 失敗（沒有錯誤內容）"));
+
+  if (gotoError) {
+    if (!isNavigationConnectionError(gotoError)) throw gotoError;
+
+    const detail =
+      gotoError instanceof Error ? gotoError.message.split("\n")[0] : String(gotoError);
+    console.warn(
+      [
+        "豊島站台連不上，跳過本次掃描（不是程式錯誤）。",
+        `  目標網址: ${TOSHIMA_URL}`,
+        `  錯誤訊息: ${detail}`,
+        "  已知原因：www2.pf489.com 從 2026-11-09 起封鎖 GitHub Actions / Azure 的來源 IP，",
+        "  同一個網址從日本家用 IP 與其他資料中心 IP 都連得到，程式層面無法繞過。",
+      ].join("\n")
+    );
+    test.skip(true, "豊島站台拒絕來自 CI 的連線（網站封鎖，非程式問題）");
+  }
+
   await page.waitForLoadState("domcontentloaded");
 
   // 步驟 1：用「使用目的から探す」→ 屋内スポーツ → バドミントン 搜尋（豊島區不需登入）
